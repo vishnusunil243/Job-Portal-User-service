@@ -5,18 +5,18 @@ import (
 	"fmt"
 
 	"github.com/vishnusunil243/Job-Portal-User-service/entities"
-	"github.com/vishnusunil243/Job-Portal-User-service/repository/Interface"
+	"github.com/vishnusunil243/Job-Portal-User-service/internal/adapters"
 	"github.com/vishnusunil243/Job-Portal-proto-files/pb"
 )
 
 type UserService struct {
-	repo Interface.UserRepo
+	adapters adapters.AdapterInterface
 	pb.UnimplementedUserServiceServer
 }
 
-func NewUserService(repo Interface.UserRepo) *UserService {
+func NewUserService(adapters adapters.AdapterInterface) *UserService {
 	return &UserService{
-		repo: repo,
+		adapters: adapters,
 	}
 }
 func (user *UserService) UserSignup(ctx context.Context, req *pb.UserSignupRequest) (*pb.UserSignupResponse, error) {
@@ -28,7 +28,7 @@ func (user *UserService) UserSignup(ctx context.Context, req *pb.UserSignupReque
 		Email: req.Email,
 		Phone: req.Phone,
 	}
-	res, err := user.repo.UserSignup(reqEntity)
+	res, err := user.adapters.UserSignup(reqEntity)
 	if err != nil {
 		return nil, err
 	}

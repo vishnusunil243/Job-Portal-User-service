@@ -1,7 +1,7 @@
-package Interface
+package adapters
 
 import "github.com/vishnusunil243/Job-Portal-User-service/entities"
 
-type UserRepo interface {
+type AdapterInterface interface {
 	UserSignup(entities.User) (entities.User, error)
 }
