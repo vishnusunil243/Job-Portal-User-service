@@ -38,3 +38,10 @@ type Address struct {
 	District string
 	City     string
 }
+type Admin struct {
+	ID       uuid.UUID
+	Name     string
+	Password string
+	Email    string
+	Phone    string
+}
