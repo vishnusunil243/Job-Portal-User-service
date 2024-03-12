@@ -10,33 +10,44 @@ type User struct {
 	Password string
 }
 type Profile struct {
-	ID        uuid.UUID `gorm:"primaryKey;unique;not null"`
-	UserId    uuid.UUID
-	User      User `gorm:"foreignKey:UserId"`
-	Image     string
-	Resume    string
-	SkillId   uuid.UUID
-	Skill     Skill `gorm:"foreignKey:SkillId"`
-	LinkId    uuid.UUID
-	Link      Link `gorm:"foreignKey:LinkId"`
-	AddressId uuid.UUID
-	Address   Address `gorm:"foreignKey:AddressId"`
+	ID     uuid.UUID `gorm:"primaryKey;unique;not null"`
+	UserId uuid.UUID
+	User   User `gorm:"foreignKey:UserId"`
+	Image  string
+	Resume string
 }
-type Skill struct {
-	ID   uuid.UUID `gorm:"primaryKey;unique;not null"`
+type Category struct {
+	ID   int
 	Name string
 }
+type Skill struct {
+	ID         int `gorm:"primaryKey;unique;not null"`
+	CategoryId int
+	Category   Category `gorm:"foreignKey:CategoryId"`
+	Name       string
+}
+type UserSkill struct {
+	ID        uuid.UUID
+	ProfileId uuid.UUID
+	Profile   Profile `gorm:"foreignKey:ProfileId"`
+	SkillId   int
+	Skill     Skill `gorm:"foreignKey:SkillId"`
+}
 type Link struct {
-	ID    uuid.UUID `gorm:"primaryKey;unique;not null"`
-	Title uuid.UUID
-	Url   string
+	ID        uuid.UUID `gorm:"primaryKey;unique;not null"`
+	Title     string
+	ProfileId uuid.UUID
+	Profile   Profile `gorm:"foreignKey:ProfileId"`
+	Url       string
 }
 type Address struct {
-	Id       uuid.UUID `gorm:"primaryKey;unique;not null"`
-	Country  string
-	State    string
-	District string
-	City     string
+	Id        uuid.UUID `gorm:"primaryKey;unique;not null"`
+	Country   string
+	State     string
+	District  string
+	City      string
+	ProfileId uuid.UUID
+	Profile   Profile `gorm:"foreignKey:ProfileId"`
 }
 type Admin struct {
 	ID       uuid.UUID

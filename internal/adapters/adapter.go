@@ -3,6 +3,7 @@ package adapters
 import (
 	"github.com/google/uuid"
 	"github.com/vishnusunil243/Job-Portal-User-service/entities"
+	"github.com/vishnusunil243/Job-Portal-User-service/entities/helperstruct"
 	"gorm.io/gorm"
 )
 
@@ -37,6 +38,121 @@ func (user *UserAdapter) GetAdminByEmail(email string) (entities.Admin, error) {
 	selectQuery := `SELECT * FROM admins WHERE email=?`
 	if err := user.DB.Raw(selectQuery, email).Scan(&res).Error; err != nil {
 		return entities.Admin{}, err
+	}
+	return res, nil
+}
+func (user *UserAdapter) CreateProfile(userID string) error {
+
+	profileId := uuid.New()
+	insertProfileQuery := `INSERT INTO profiles (id,user_id) VALUES ($1,$2)`
+	if err := user.DB.Exec(insertProfileQuery, profileId, userID).Error; err != nil {
+		return err
+	}
+	return nil
+
+}
+func (user *UserAdapter) GetProfileIdByUserId(userId string) (string, error) {
+	var profileId string
+	selectProfileQuery := `SELECT id FROM profiles WHERE user_id=?`
+	if err := user.DB.Raw(selectProfileQuery, userId).Scan(&profileId).Error; err != nil {
+		return "", err
+	}
+	return profileId, nil
+}
+func (user *UserAdapter) AdminAddCategory(category entities.Category) error {
+	insertCategoryQuery := `INSERT INTO categories (name) VALUES ($1)`
+	if err := user.DB.Exec(insertCategoryQuery, category.Name).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) AdminUpdateCategory(category entities.Category) error {
+	updateCategory := `UPDATE categories SET name=$1 where id=$2`
+	if err := user.DB.Exec(updateCategory, category.Name, category.ID).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) GetAllCategory() ([]entities.Category, error) {
+	var res []entities.Category
+	selectCategories := `SELECT * FROM categories`
+	if err := user.DB.Raw(selectCategories).Scan(&res).Error; err != nil {
+		return []entities.Category{}, err
+	}
+	return res, nil
+}
+func (user *UserAdapter) AdminAddSkill(skill entities.Skill) error {
+	var id int
+	selectMaxId := `SELECT COALESCE(MAX(id),0) FROM skills`
+	if err := user.DB.Raw(selectMaxId).Scan(&id).Error; err != nil {
+		return err
+	}
+	insertSkillQuery := `INSERT INTO skills (id,name) VALUES ($1,$2)`
+	if err := user.DB.Exec(insertSkillQuery, id+1, skill.Name).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) AdminUpdateSkill(skill entities.Skill) error {
+	updateskillQuery := `UPDATE skills SET name=$1,category_id=$2 WHERE id=$3`
+	if err := user.DB.Exec(updateskillQuery, skill.Name, skill.CategoryId, skill.ID).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) AdminGetAllSkills() ([]helperstruct.SkillHelper, error) {
+	var res []helperstruct.SkillHelper
+	selectSkillQuery := `SELECT s.id as skill_id,s.name AS skill_name,c.id AS category_id,c.name as category_name FROM skills s JOIN categories c ON c.id=s.category_id`
+	if err := user.DB.Raw(selectSkillQuery).Scan(&res).Error; err != nil {
+		return []helperstruct.SkillHelper{}, err
+	}
+	return res, nil
+
+}
+func (user *UserAdapter) UserAddSkill(skills entities.UserSkill) error {
+	id := uuid.New()
+	insertSkillQuery := `INSERT INTO user_skills(id,skill_id,profile_id) VALUES($1,$2,$3)`
+	if err := user.DB.Exec(insertSkillQuery, id, skills.SkillId, skills.ProfileId).Error; err != nil {
+		return err
+	}
+	return nil
+
+}
+func (user *UserAdapter) UserDeleteSkill(skill entities.UserSkill) error {
+	deleteSkillQuery := `DELETE FROM user_skills WHERE skill_id=$1 AND profile_id=$2`
+	if err := user.DB.Exec(deleteSkillQuery, skill.SkillId, skill.ProfileId).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) UserGetAllSkills(profileId string) ([]helperstruct.SkillHelper, error) {
+	var res []helperstruct.SkillHelper
+	selectSkillQueryUser := `SELECT s.id as skill_id,s.name AS skill_name,c.id AS category_id,c.name as category_name FROM skills s JOIN categories c ON c.id=s.category_id WHERE profile_id=$1`
+	if err := user.DB.Raw(selectSkillQueryUser, profileId).Scan(&res).Error; err != nil {
+		return []helperstruct.SkillHelper{}, err
+	}
+	return res, nil
+}
+func (user *UserAdapter) AddLink(links entities.Link) error {
+	id := uuid.New()
+	insertLinkQuery := `INSERT INTO links (id,profile_id,url,title) VALUES ($1,$2,$3,$4)`
+	if err := user.DB.Exec(insertLinkQuery, id, links.ProfileId, links.Url, links.Title).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) DeleteLink(id string) error {
+	deleteQuery := `DELETE FROM links WHERE id=?`
+	if err := user.DB.Exec(deleteQuery, id).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) GetAllLinksUser(profileID string) ([]entities.Link, error) {
+	var res []entities.Link
+	selectLinkQuery := `SELECT * FROM links WHERE profile_id=?`
+	if err := user.DB.Raw(selectLinkQuery, profileID).Scan(&res).Error; err != nil {
+		return []entities.Link{}, err
 	}
 	return res, nil
 }
