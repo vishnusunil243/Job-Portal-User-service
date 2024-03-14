@@ -35,6 +35,21 @@ func (user *UserService) UserSignup(ctx context.Context, req *pb.UserSignupReque
 	if req.Phone == "" {
 		return nil, fmt.Errorf("phone can't be empty")
 	}
+	check1, err := user.adapters.GetUserByEmail(req.Email)
+	if err != nil {
+		return nil, err
+	}
+	if check1.Name != "" {
+		return nil, fmt.Errorf("an account already exists with the given email")
+	}
+	check2, err := user.adapters.GetUserByPhone(req.Phone)
+	if err != nil {
+		return nil, err
+
+	}
+	if check2.Name != "" {
+		return nil, fmt.Errorf("an account already exists with the given phone number")
+	}
 	hashedPassword, err := helper.HashPassword(req.Password)
 	if err != nil {
 		return nil, err
@@ -109,8 +124,14 @@ func (user *UserService) AddCategory(ctx context.Context, req *pb.AddCategoryReq
 	reqEntity := entities.Category{
 		Name: req.Category,
 	}
-	fmt.Println(req.Category)
-	err := user.adapters.AdminAddCategory(reqEntity)
+	check1, err := user.adapters.GetCategoryByName(req.Category)
+	if err != nil {
+		return nil, err
+	}
+	if check1.Name != "" {
+		return nil, fmt.Errorf("category already exists")
+	}
+	err = user.adapters.AdminAddCategory(reqEntity)
 	if err != nil {
 		return &emptypb.Empty{}, err
 	}
@@ -121,7 +142,14 @@ func (user *UserService) UpdateCategory(ctx context.Context, req *pb.UpdateCateg
 		ID:   int(req.Id),
 		Name: req.Category,
 	}
-	err := user.adapters.AdminUpdateCategory(reqEntity)
+	check1, err := user.adapters.GetCategoryByName(req.Category)
+	if err != nil {
+		return nil, err
+	}
+	if check1.Name != "" {
+		return nil, fmt.Errorf("category already exists")
+	}
+	err = user.adapters.AdminUpdateCategory(reqEntity)
 	if err != nil {
 		return &emptypb.Empty{}, err
 	}
@@ -148,7 +176,14 @@ func (user *UserService) AddSkillAdmin(ctx context.Context, req *pb.AddSkillRequ
 		CategoryId: int(req.CategoryId),
 		Name:       req.Skill,
 	}
-	err := user.adapters.AdminAddSkill(reqEntity)
+	check1, err := user.adapters.GetSkillByName(req.Skill)
+	if err != nil {
+		return nil, err
+	}
+	if check1.Name != "" {
+		return nil, fmt.Errorf("skill already exist")
+	}
+	err = user.adapters.AdminAddSkill(reqEntity)
 	if err != nil {
 		return nil, err
 	}
@@ -159,6 +194,13 @@ func (user *UserService) AdminUpdateSkill(ctx context.Context, req *pb.SkillResp
 		ID:         int(req.Id),
 		CategoryId: int(req.CategoryId),
 		Name:       req.Skill,
+	}
+	check1, err := user.adapters.GetSkillByName(req.Skill)
+	if err != nil {
+		return nil, err
+	}
+	if check1.Name != "" {
+		return nil, fmt.Errorf("skill already exist")
 	}
 	if err := user.adapters.AdminUpdateSkill(reqEntity); err != nil {
 		return nil, err
@@ -207,6 +249,13 @@ func (user *UserService) GetAllSkillsUser(req *pb.GetUserById, srv pb.UserServic
 	return nil
 }
 func (user *UserService) AddSkillUser(ctx context.Context, req *pb.DeleteSkillRequest) (*emptypb.Empty, error) {
+	check, err := user.adapters.GetSkillById(int(req.SkillId))
+	if err != nil {
+		return nil, err
+	}
+	if check.SkillId == 0 {
+		return nil, fmt.Errorf("please enter a valid skill id")
+	}
 	profile, err := user.adapters.GetProfileIdByUserId(req.UserId)
 	if err != nil {
 		return nil, err
@@ -243,6 +292,7 @@ func (user *UserService) DeleteSkillUser(ctx context.Context, req *pb.DeleteSkil
 	return nil, nil
 }
 func (user *UserService) AddLinkUser(ctx context.Context, req *pb.AddLinkRequest) (*emptypb.Empty, error) {
+
 	profile, err := user.adapters.GetProfileIdByUserId(req.UserId)
 	if err != nil {
 		return nil, err
@@ -250,6 +300,13 @@ func (user *UserService) AddLinkUser(ctx context.Context, req *pb.AddLinkRequest
 	profileId, err := uuid.Parse(profile)
 	if err != nil {
 		return nil, err
+	}
+	check, err := user.adapters.GetLinkByTitle(profile, req.Title)
+	if err != nil {
+		return nil, err
+	}
+	if check.Title != "" {
+		return nil, fmt.Errorf("link with the given title is already present please delete the existing one or add a new title")
 	}
 	reqEntity := entities.Link{
 		ProfileId: profileId,
@@ -288,4 +345,156 @@ func (user *UserService) GetAllLinksUser(req *pb.GetUserById, srv pb.UserService
 		}
 	}
 	return nil
+}
+func (user *UserService) GetSkillById(ctx context.Context, req *pb.GetSkillByIdRequest) (*pb.SkillResponse, error) {
+	res, err := user.adapters.GetSkillById(int(req.Id))
+	if err != nil {
+		return &pb.SkillResponse{}, err
+	}
+	return &pb.SkillResponse{
+		Id:         int32(res.SkillId),
+		Skill:      res.SkillName,
+		CategoryId: int32(res.CategoryId),
+		Category:   res.CategoryName,
+	}, nil
+}
+func (user *UserService) GetCategoryById(ctx context.Context, req *pb.GetCategoryByIdRequest) (*pb.UpdateCategoryRequest, error) {
+	category, err := user.adapters.GetCategoryById(int(req.Id))
+	if err != nil {
+		return nil, err
+	}
+	res := &pb.UpdateCategoryRequest{
+		Id:       int32(category.ID),
+		Category: category.Name,
+	}
+	return res, nil
+}
+func (user *UserService) GetUser(ctx context.Context, req *pb.GetUserById) (*pb.UserSignupResponse, error) {
+	userData, err := user.adapters.GetUserById(req.Id)
+	if err != nil {
+		return nil, err
+	}
+	res := &pb.UserSignupResponse{
+		Id:    userData.ID.String(),
+		Name:  userData.Name,
+		Email: userData.Email,
+		Phone: userData.Phone,
+	}
+	return res, nil
+}
+func (user *UserService) JobApply(ctx context.Context, req *pb.JobApplyRequest) (*emptypb.Empty, error) {
+	userId, err := uuid.Parse(req.UserId)
+	if err != nil {
+		return nil, err
+	}
+	reqEntity := entities.Jobs{
+		UserId: userId,
+		JobId:  req.JobId,
+	}
+	if err := user.adapters.JobApply(reqEntity); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+func (user *UserService) UserEditPhone(ctx context.Context, req *pb.EditPhoneRequest) (*emptypb.Empty, error) {
+	check, err := user.adapters.GetUserByPhone(req.Phone)
+	if err != nil {
+		return nil, err
+	}
+	reqUserId, err := uuid.Parse(req.UserId)
+	if err != nil {
+		return nil, err
+	}
+	if check.ID != uuid.Nil && check.ID != reqUserId {
+		return nil, fmt.Errorf("account already exists with the given phone please provide a new phone")
+	}
+	reqEntity := entities.User{
+		ID:    reqUserId,
+		Phone: req.Phone,
+	}
+	if err := user.adapters.UserEditPhone(reqEntity); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+func (user *UserService) UserEditName(ctx context.Context, req *pb.EditNameRequest) (*emptypb.Empty, error) {
+	userId, err := uuid.Parse(req.UserId)
+	if err != nil {
+		return nil, err
+	}
+	reqEntity := entities.User{
+		ID:   userId,
+		Name: req.Name,
+	}
+	if err := user.adapters.UserEditName(reqEntity); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+func (user *UserService) UserAddAddress(ctx context.Context, req *pb.AddAddressRequest) (*emptypb.Empty, error) {
+	profile, err := user.adapters.GetProfileIdByUserId(req.UserId)
+	if err != nil {
+		return nil, err
+	}
+	profileId, err := uuid.Parse(profile)
+	if err != nil {
+		return nil, err
+	}
+	address, err := user.adapters.GetAddressByProfileId(profile)
+	if err != nil {
+		return nil, err
+	}
+	if address.Country != "" {
+		return nil, fmt.Errorf("you have already added an address please edit the existing one")
+	}
+	reqEntity := entities.Address{
+		Country:   req.Country,
+		State:     req.State,
+		District:  req.District,
+		City:      req.City,
+		ProfileId: profileId,
+	}
+	if err := user.adapters.UserAddAddress(reqEntity); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+func (user *UserService) UserEditAddress(ctx context.Context, req *pb.AddressResponse) (*emptypb.Empty, error) {
+	profile, err := user.adapters.GetProfileIdByUserId(req.UserId)
+	if err != nil {
+		return nil, err
+	}
+	profileId, err := uuid.Parse(profile)
+	if err != nil {
+		return nil, err
+	}
+	reqEntity := entities.Address{
+		Country:   req.Country,
+		State:     req.State,
+		District:  req.District,
+		City:      req.City,
+		ProfileId: profileId,
+	}
+	if err := user.adapters.UserEditAddress(reqEntity); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+func (user *UserService) UserGetAddress(ctx context.Context, req *pb.GetUserById) (*pb.AddressResponse, error) {
+	profile, err := user.adapters.GetProfileIdByUserId(req.Id)
+	if err != nil {
+		return nil, err
+	}
+	address, err := user.adapters.GetAddressByProfileId(profile)
+	if err != nil {
+		return nil, err
+	}
+	res := &pb.AddressResponse{
+		Id:       address.Id.String(),
+		Country:  address.Country,
+		State:    address.State,
+		District: address.District,
+		City:     address.City,
+	}
+	return res, nil
 }

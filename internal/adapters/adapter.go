@@ -25,6 +25,14 @@ func (user *UserAdapter) UserSignup(userData entities.User) (entities.User, erro
 	}
 	return res, nil
 }
+func (user *UserAdapter) GetUserByPhone(phone string) (entities.User, error) {
+	var res entities.User
+	selectQuery := `SELECT * FROM USERS WHERE phone=?`
+	if err := user.DB.Raw(selectQuery, phone).Scan(&res).Error; err != nil {
+		return entities.User{}, err
+	}
+	return res, nil
+}
 func (user *UserAdapter) GetUserByEmail(email string) (entities.User, error) {
 	var res entities.User
 	selectQuery := `SELECT * FROM USERS WHERE email=?`
@@ -81,17 +89,33 @@ func (user *UserAdapter) GetAllCategory() ([]entities.Category, error) {
 	}
 	return res, nil
 }
+func (user *UserAdapter) GetCategoryByName(category string) (entities.Category, error) {
+	var res entities.Category
+	selectCategory := `SELECT * FROM categories WHERE name=?`
+	if err := user.DB.Raw(selectCategory, category).Scan(&res).Error; err != nil {
+		return entities.Category{}, err
+	}
+	return res, nil
+}
 func (user *UserAdapter) AdminAddSkill(skill entities.Skill) error {
 	var id int
 	selectMaxId := `SELECT COALESCE(MAX(id),0) FROM skills`
 	if err := user.DB.Raw(selectMaxId).Scan(&id).Error; err != nil {
 		return err
 	}
-	insertSkillQuery := `INSERT INTO skills (id,name) VALUES ($1,$2)`
-	if err := user.DB.Exec(insertSkillQuery, id+1, skill.Name).Error; err != nil {
+	insertSkillQuery := `INSERT INTO skills (id,name,category_id) VALUES ($1,$2,$3)`
+	if err := user.DB.Exec(insertSkillQuery, id+1, skill.Name, skill.CategoryId).Error; err != nil {
 		return err
 	}
 	return nil
+}
+func (user *UserAdapter) GetSkillByName(skill string) (entities.Skill, error) {
+	var res entities.Skill
+	selectQuery := `SELECT * FROM skills WHERE name=?`
+	if err := user.DB.Raw(selectQuery, skill).Scan(&res).Error; err != nil {
+		return entities.Skill{}, err
+	}
+	return res, nil
 }
 func (user *UserAdapter) AdminUpdateSkill(skill entities.Skill) error {
 	updateskillQuery := `UPDATE skills SET name=$1,category_id=$2 WHERE id=$3`
@@ -127,7 +151,7 @@ func (user *UserAdapter) UserDeleteSkill(skill entities.UserSkill) error {
 }
 func (user *UserAdapter) UserGetAllSkills(profileId string) ([]helperstruct.SkillHelper, error) {
 	var res []helperstruct.SkillHelper
-	selectSkillQueryUser := `SELECT s.id as skill_id,s.name AS skill_name,c.id AS category_id,c.name as category_name FROM skills s JOIN categories c ON c.id=s.category_id WHERE profile_id=$1`
+	selectSkillQueryUser := `SELECT s.id as skill_id,s.name AS skill_name,c.id AS category_id,c.name as category_name FROM skills s JOIN categories c ON c.id=s.category_id JOIN user_skills u ON u.skill_id=s.id WHERE profile_id=$1`
 	if err := user.DB.Raw(selectSkillQueryUser, profileId).Scan(&res).Error; err != nil {
 		return []helperstruct.SkillHelper{}, err
 	}
@@ -141,6 +165,14 @@ func (user *UserAdapter) AddLink(links entities.Link) error {
 	}
 	return nil
 }
+func (user *UserAdapter) GetLinkByTitle(profileId string, title string) (entities.Link, error) {
+	selectQuery := `SELECT * FROM links WHERE profile_id=$1 AND title=$2`
+	var res entities.Link
+	if err := user.DB.Raw(selectQuery, profileId, title).Scan(&res).Error; err != nil {
+		return entities.Link{}, err
+	}
+	return res, nil
+}
 func (user *UserAdapter) DeleteLink(id string) error {
 	deleteQuery := `DELETE FROM links WHERE id=?`
 	if err := user.DB.Exec(deleteQuery, id).Error; err != nil {
@@ -153,6 +185,75 @@ func (user *UserAdapter) GetAllLinksUser(profileID string) ([]entities.Link, err
 	selectLinkQuery := `SELECT * FROM links WHERE profile_id=?`
 	if err := user.DB.Raw(selectLinkQuery, profileID).Scan(&res).Error; err != nil {
 		return []entities.Link{}, err
+	}
+	return res, nil
+}
+func (user *UserAdapter) GetSkillById(id int) (helperstruct.SkillHelper, error) {
+	selectSkillQuery := `SELECT s.id AS skill_id,s.name AS skill_name,c.id AS category_id,c.name AS category_name from skills s LEFT JOIN categories c ON c.id=s.category_id where s.id=?`
+	var res helperstruct.SkillHelper
+	if err := user.DB.Raw(selectSkillQuery, id).Scan(&res).Error; err != nil {
+		return helperstruct.SkillHelper{}, err
+	}
+	return res, nil
+}
+func (user *UserAdapter) GetCategoryById(id int) (entities.Category, error) {
+	selectCategoryQuery := `SELECT * FROM categories WHERE id=?`
+	var res entities.Category
+	if err := user.DB.Raw(selectCategoryQuery, id).Scan(&res).Error; err != nil {
+		return entities.Category{}, err
+	}
+	return res, nil
+}
+func (user *UserAdapter) GetUserById(userId string) (entities.User, error) {
+	selectUserByIdQuery := `SELECT * from users WHERE id=?`
+	var res entities.User
+	if err := user.DB.Raw(selectUserByIdQuery, userId).Scan(&res).Error; err != nil {
+		return entities.User{}, err
+	}
+	return res, nil
+}
+func (user *UserAdapter) JobApply(req entities.Jobs) error {
+	id := uuid.New()
+	insertIntoQuery := `INSERT INTO jobs (id,job_id,user_id,job_status_id) VALUES ($1,$2,$3,$4)`
+	if err := user.DB.Exec(insertIntoQuery, id, req.JobId, req.UserId, 1).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) UserEditName(req entities.User) error {
+	updateQuery := `UPDATE users SET name=$1 WHERE id=$2`
+	if err := user.DB.Exec(updateQuery, req.Name, req.ID).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) UserEditPhone(req entities.User) error {
+	updateQuery := `UPDATE users SET phone=$1 WHERE id=$2`
+	if err := user.DB.Exec(updateQuery, req.Phone, req.ID).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) UserAddAddress(req entities.Address) error {
+	id := uuid.New()
+	insertQuery := `INSERT INTO addresses (id,country,state,district,city,profile_id) VALUES ($1,$2,$3,$4,$5,$6)`
+	if err := user.DB.Exec(insertQuery, id, req.Country, req.State, req.District, req.City, req.ProfileId).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) UserEditAddress(req entities.Address) error {
+	updateQuery := `UPDATE addresses SET country=$1,state=$2,district=$3,city=$4 WHERE profile_id=$5`
+	if err := user.DB.Exec(updateQuery, req.Country, req.State, req.District, req.City, req.ProfileId).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) GetAddressByProfileId(id string) (entities.Address, error) {
+	var res entities.Address
+	selectQuery := `SELECT * FROM addresses WHERE profile_id=?`
+	if err := user.DB.Raw(selectQuery, id).Scan(&res).Error; err != nil {
+		return entities.Address{}, err
 	}
 	return res, nil
 }

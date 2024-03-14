@@ -56,3 +56,15 @@ type Admin struct {
 	Email    string
 	Phone    string
 }
+type Jobs struct {
+	Id          uuid.UUID
+	UserId      uuid.UUID
+	JobId       string
+	User        User `gorm:"foreignKey:UserId"`
+	JobStatusId int
+	JobStatus   JobStatus `gorm:"foreignKey:JobStatusId"`
+}
+type JobStatus struct {
+	Id     int
+	Status string
+}
