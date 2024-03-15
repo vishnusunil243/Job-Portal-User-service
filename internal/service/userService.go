@@ -8,18 +8,21 @@ import (
 	"github.com/vishnusunil243/Job-Portal-User-service/entities"
 	"github.com/vishnusunil243/Job-Portal-User-service/internal/adapters"
 	"github.com/vishnusunil243/Job-Portal-User-service/internal/helper"
+	"github.com/vishnusunil243/Job-Portal-User-service/internal/usecases"
 	"github.com/vishnusunil243/Job-Portal-proto-files/pb"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type UserService struct {
 	adapters adapters.AdapterInterface
+	usecases usecases.Usecases
 	pb.UnimplementedUserServiceServer
 }
 
-func NewUserService(adapters adapters.AdapterInterface) *UserService {
+func NewUserService(adapters adapters.AdapterInterface, usecases usecases.Usecases) *UserService {
 	return &UserService{
 		adapters: adapters,
+		usecases: usecases,
 	}
 }
 func (user *UserService) UserSignup(ctx context.Context, req *pb.UserSignupRequest) (*pb.UserSignupResponse, error) {
@@ -489,12 +492,58 @@ func (user *UserService) UserGetAddress(ctx context.Context, req *pb.GetUserById
 	if err != nil {
 		return nil, err
 	}
+	addressId := ""
+	if address.Id != uuid.Nil {
+		addressId = address.Id.String()
+	}
 	res := &pb.AddressResponse{
-		Id:       address.Id.String(),
+		Id:       addressId,
 		Country:  address.Country,
 		State:    address.State,
 		District: address.District,
 		City:     address.City,
 	}
 	return res, nil
+}
+func (user *UserService) UserUploadProfileImage(ctx context.Context, req *pb.UserImageRequest) (*pb.UserImageResponse, error) {
+	profile, err := user.adapters.GetProfileIdByUserId(req.UserId)
+	if err != nil {
+		return nil, err
+	}
+	url, err := user.usecases.UploadImage(req, profile)
+	if err != nil {
+		return nil, err
+	}
+	res := &pb.UserImageResponse{
+		Url: url,
+	}
+	return res, nil
+}
+func (user *UserService) UserGetProfilePic(ctx context.Context, req *pb.GetUserById) (*pb.UserImageResponse, error) {
+	profile, err := user.adapters.GetProfileIdByUserId(req.Id)
+	if err != nil {
+		return nil, err
+	}
+	image, err := user.adapters.GetProfilePic(profile)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.UserImageResponse{
+		Url: image,
+	}, nil
+}
+func (user *UserService) UserAppliedJobs(req *pb.GetUserById, srv pb.UserService_UserAppliedJobsServer) error {
+	jobIds, err := user.adapters.GetAppliedJobIds(req.Id)
+	if err != nil {
+		return err
+	}
+	for _, jobId := range jobIds {
+		res := &pb.JobApplyRequest{
+			JobId: jobId,
+		}
+		if err := srv.Send(res); err != nil {
+			return err
+		}
+	}
+	return nil
 }

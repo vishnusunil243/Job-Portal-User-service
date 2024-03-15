@@ -36,4 +36,7 @@ type AdapterInterface interface {
 	UserAddAddress(entities.Address) error
 	UserEditAddress(entities.Address) error
 	GetAddressByProfileId(profileId string) (entities.Address, error)
+	UploadProfileImage(Image, ProfileId string) (string, error)
+	GetProfilePic(string) (string, error)
+	GetAppliedJobIds(string) ([]string, error)
 }

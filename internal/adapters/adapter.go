@@ -257,3 +257,27 @@ func (user *UserAdapter) GetAddressByProfileId(id string) (entities.Address, err
 	}
 	return res, nil
 }
+func (user *UserAdapter) UploadProfileImage(image, profileId string) (string, error) {
+	var res string
+	insertImageQuery := `UPDATE profiles SET image=$1 WHERE id=$2 RETURNING image`
+	if err := user.DB.Raw(insertImageQuery, image, profileId).Scan(&res).Error; err != nil {
+		return "", err
+	}
+	return res, nil
+}
+func (user *UserAdapter) GetProfilePic(profileId string) (string, error) {
+	var res string
+	selectQuery := `SELECT image FROM profiles WHERE id=$1`
+	if err := user.DB.Raw(selectQuery, profileId).Scan(&res).Error; err != nil {
+		return "", err
+	}
+	return res, nil
+}
+func (user *UserAdapter) GetAppliedJobIds(userId string) ([]string, error) {
+	var res []string
+	selectQuery := `SELECT job_id FROM jobs WHERE user_id=$1 AND job_status_id=1`
+	if err := user.DB.Raw(selectQuery, userId).Scan(&res).Error; err != nil {
+		return []string{}, err
+	}
+	return res, nil
+}
