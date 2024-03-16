@@ -263,6 +263,13 @@ func (user *UserService) AddSkillUser(ctx context.Context, req *pb.DeleteSkillRe
 	if err != nil {
 		return nil, err
 	}
+	check1, err := user.adapters.GetUserSkillById(profile, int(req.SkillId))
+	if err != nil {
+		return nil, err
+	}
+	if check1.SkillId != 0 {
+		return nil, fmt.Errorf("you already have added this skill please add a new one")
+	}
 	profileId, err := uuid.Parse(profile)
 	if err != nil {
 		return nil, err
@@ -393,6 +400,13 @@ func (user *UserService) JobApply(ctx context.Context, req *pb.JobApplyRequest) 
 	reqEntity := entities.Jobs{
 		UserId: userId,
 		JobId:  req.JobId,
+	}
+	jobs, err := user.adapters.GetAppliedJob(req.UserId, req.JobId)
+	if err != nil {
+		return nil, err
+	}
+	if jobs.JobStatusId != 0 {
+		return nil, fmt.Errorf("you have already applied for this job")
 	}
 	if err := user.adapters.JobApply(reqEntity); err != nil {
 		return nil, err

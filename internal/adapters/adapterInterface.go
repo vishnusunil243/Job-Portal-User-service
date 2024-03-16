@@ -39,4 +39,6 @@ type AdapterInterface interface {
 	UploadProfileImage(Image, ProfileId string) (string, error)
 	GetProfilePic(string) (string, error)
 	GetAppliedJobIds(string) ([]string, error)
+	GetAppliedJob(string, string) (entities.Jobs, error)
+	GetUserSkillById(string, int) (entities.UserSkill, error)
 }

@@ -281,3 +281,19 @@ func (user *UserAdapter) GetAppliedJobIds(userId string) ([]string, error) {
 	}
 	return res, nil
 }
+func (user *UserAdapter) GetAppliedJob(userId, jobId string) (entities.Jobs, error) {
+	var res entities.Jobs
+	selectQuery := `SELECT * FROM jobs WHERE job_id=$1 AND user_id=$2`
+	if err := user.DB.Raw(selectQuery, jobId, userId).Scan(&res).Error; err != nil {
+		return entities.Jobs{}, err
+	}
+	return res, nil
+}
+func (user *UserAdapter) GetUserSkillById(profileId string, skillId int) (entities.UserSkill, error) {
+	var res entities.UserSkill
+	selectQuery := `SELECT * FROM user_skills WHERE profile_id=$1 AND skill_id=$2`
+	if err := user.DB.Raw(selectQuery, profileId, skillId).Scan(&res).Error; err != nil {
+		return entities.UserSkill{}, err
+	}
+	return res, nil
+}
