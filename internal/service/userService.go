@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/google/uuid"
 	"github.com/vishnusunil243/Job-Portal-User-service/entities"
@@ -11,6 +12,10 @@ import (
 	"github.com/vishnusunil243/Job-Portal-User-service/internal/usecases"
 	"github.com/vishnusunil243/Job-Portal-proto-files/pb"
 	"google.golang.org/protobuf/types/known/emptypb"
+)
+
+var (
+	CompanyClient pb.CompanyServiceClient
 )
 
 type UserService struct {
@@ -384,11 +389,16 @@ func (user *UserService) GetUser(ctx context.Context, req *pb.GetUserById) (*pb.
 	if err != nil {
 		return nil, err
 	}
+	experience, err := user.adapters.GetExperience(req.Id)
+	if err != nil {
+		return nil, err
+	}
 	res := &pb.UserSignupResponse{
-		Id:    userData.ID.String(),
-		Name:  userData.Name,
-		Email: userData.Email,
-		Phone: userData.Phone,
+		Id:                       userData.ID.String(),
+		Name:                     userData.Name,
+		Email:                    userData.Email,
+		Phone:                    userData.Phone,
+		ExperienceInCurrentField: experience,
 	}
 	return res, nil
 }
@@ -408,7 +418,36 @@ func (user *UserService) JobApply(ctx context.Context, req *pb.JobApplyRequest) 
 	if jobs.JobStatusId != 0 {
 		return nil, fmt.Errorf("you have already applied for this job")
 	}
-	if err := user.adapters.JobApply(reqEntity); err != nil {
+	jobskills, err := CompanyClient.GetAllJobSkill(context.Background(), &pb.GetJobById{
+		Id: req.JobId,
+	})
+	if err != nil {
+		return nil, err
+	}
+	jobSkillData := []*pb.JobSkillResponse{}
+	for {
+		jobSkill, err := jobskills.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		jobSkillData = append(jobSkillData, jobSkill)
+	}
+	jobData, err := CompanyClient.GetJob(context.Background(), &pb.GetJobById{
+		Id: req.JobId,
+	})
+	if err != nil {
+		return nil, err
+	}
+	jobExperience := helper.GetNumberInString(jobData.Minexperience)
+	userExp, err := user.adapters.GetExperience(req.UserId)
+	if err != nil {
+		return nil, err
+	}
+	userExperience := helper.GetNumberInString(userExp)
+	if err := user.usecases.JobApply(reqEntity, jobSkillData, jobExperience, userExperience); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -560,4 +599,35 @@ func (user *UserService) UserAppliedJobs(req *pb.GetUserById, srv pb.UserService
 		}
 	}
 	return nil
+}
+func (user *UserService) GetAppliedUsersByJobId(req *pb.JobIdRequest, srv pb.UserService_GetAppliedUsersByJobIdServer) error {
+	users, err := user.usecases.GetAppliedUsersByJobId(req.JobId)
+	if err != nil {
+		return err
+	}
+	for _, usr := range users {
+		userData, err := user.adapters.GetUserById(usr.UserId.String())
+		if err != nil {
+			return err
+		}
+		res := &pb.GetUserResponse{
+			Id:        usr.UserId.String(),
+			Name:      userData.Name,
+			Email:     userData.Email,
+			Phone:     userData.Phone,
+			Weightage: float32(usr.Weightage),
+		}
+		fmt.Println(res)
+		if err := srv.Send(res); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (user *UserService) AddExperience(ctx context.Context, req *pb.AddExperienceRequest) (*emptypb.Empty, error) {
+	err := user.adapters.AddExperience(req.UserId, req.Experience)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
 }

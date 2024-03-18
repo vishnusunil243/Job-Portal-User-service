@@ -10,11 +10,12 @@ type User struct {
 	Password string
 }
 type Profile struct {
-	ID     uuid.UUID `gorm:"primaryKey;unique;not null"`
-	UserId uuid.UUID
-	User   User `gorm:"foreignKey:UserId"`
-	Image  string
-	Resume string
+	ID                       uuid.UUID `gorm:"primaryKey;unique;not null"`
+	UserId                   uuid.UUID
+	User                     User `gorm:"foreignKey:UserId"`
+	Image                    string
+	Resume                   string
+	ExperienceInCurrentField string
 }
 type Category struct {
 	ID   int
@@ -63,6 +64,7 @@ type Jobs struct {
 	User        User `gorm:"foreignKey:UserId"`
 	JobStatusId int
 	JobStatus   JobStatus `gorm:"foreignKey:JobStatusId"`
+	Weightage   float64
 }
 type JobStatus struct {
 	Id     int

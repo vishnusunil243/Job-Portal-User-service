@@ -214,8 +214,8 @@ func (user *UserAdapter) GetUserById(userId string) (entities.User, error) {
 }
 func (user *UserAdapter) JobApply(req entities.Jobs) error {
 	id := uuid.New()
-	insertIntoQuery := `INSERT INTO jobs (id,job_id,user_id,job_status_id) VALUES ($1,$2,$3,$4)`
-	if err := user.DB.Exec(insertIntoQuery, id, req.JobId, req.UserId, 1).Error; err != nil {
+	insertIntoQuery := `INSERT INTO jobs (id,job_id,user_id,job_status_id,weightage) VALUES ($1,$2,$3,$4,$5)`
+	if err := user.DB.Exec(insertIntoQuery, id, req.JobId, req.UserId, 1, req.Weightage).Error; err != nil {
 		return err
 	}
 	return nil
@@ -294,6 +294,29 @@ func (user *UserAdapter) GetUserSkillById(profileId string, skillId int) (entiti
 	selectQuery := `SELECT * FROM user_skills WHERE profile_id=$1 AND skill_id=$2`
 	if err := user.DB.Raw(selectQuery, profileId, skillId).Scan(&res).Error; err != nil {
 		return entities.UserSkill{}, err
+	}
+	return res, nil
+}
+func (user *UserAdapter) GetAppliedUsersByJobId(jobId string) ([]entities.Jobs, error) {
+	selectQuery := `SELECT * FROM jobs WHERE job_id=? ORDER BY weightage DESC`
+	var res []entities.Jobs
+	if err := user.DB.Raw(selectQuery, jobId).Scan(&res).Error; err != nil {
+		return []entities.Jobs{}, err
+	}
+	return res, nil
+}
+func (user *UserAdapter) AddExperience(userId, experience string) error {
+	updateProfileQuery := `UPDATE profiles SET experience_in_current_field=$1 WHERE user_id=$2`
+	if err := user.DB.Exec(updateProfileQuery, experience, userId).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) GetExperience(userId string) (string, error) {
+	selectExperience := `SELECT COALESCE(experience_in_current_field,'0 years') FROM profiles WHERE user_id=?`
+	var res string
+	if err := user.DB.Raw(selectExperience, userId).Scan(&res).Error; err != nil {
+		return "", err
 	}
 	return res, nil
 }

@@ -2,6 +2,7 @@ package helper
 
 import (
 	"fmt"
+	"unicode"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -20,4 +21,16 @@ func CompareHashedPassword(hashedPass, password string) bool {
 		return false
 	}
 	return true
+}
+func GetNumberInString(s string) int {
+	num := 0
+	if len(s) == 0 {
+		return 0
+	}
+	for _, sr := range s {
+		if unicode.IsNumber(sr) {
+			num = int(sr - '0')
+		}
+	}
+	return num
 }

@@ -41,4 +41,7 @@ type AdapterInterface interface {
 	GetAppliedJobIds(string) ([]string, error)
 	GetAppliedJob(string, string) (entities.Jobs, error)
 	GetUserSkillById(string, int) (entities.UserSkill, error)
+	GetAppliedUsersByJobId(jobId string) ([]entities.Jobs, error)
+	AddExperience(userId, experience string) error
+	GetExperience(userId string) (string, error)
 }
