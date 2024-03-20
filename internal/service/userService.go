@@ -631,3 +631,49 @@ func (user *UserService) AddExperience(ctx context.Context, req *pb.AddExperienc
 	}
 	return nil, nil
 }
+func (user *UserService) AddToShortlist(ctx context.Context, req *pb.AddToShortListRequest) (*emptypb.Empty, error) {
+	weightage, err := user.adapters.GetWeightage(req.UserId, req.JobId)
+	if err != nil {
+		return nil, err
+	}
+	userID, err := uuid.Parse(req.UserId)
+	if err != nil {
+		return nil, err
+	}
+	jobID, err := uuid.Parse(req.JobId)
+	if err != nil {
+		return nil, err
+	}
+	reqEntity := entities.Shortlist{
+		UserId:    userID,
+		JobId:     jobID,
+		Weightage: weightage,
+	}
+	if err := user.adapters.AddToShortlist(reqEntity); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+func (user *UserService) GetShortlist(req *pb.JobIdRequest, srv pb.UserService_GetShortlistServer) error {
+	shortlists, err := user.adapters.GetShortlist(req.JobId)
+	if err != nil {
+		return err
+	}
+	for _, shortlist := range shortlists {
+		userData, err := user.adapters.GetUserById(shortlist.UserId.String())
+		if err != nil {
+			return err
+		}
+		res := &pb.GetUserResponse{
+			Id:        userData.ID.String(),
+			Name:      userData.Name,
+			Email:     userData.Email,
+			Phone:     userData.Phone,
+			Weightage: float32(shortlist.Weightage),
+		}
+		if err := srv.Send(res); err != nil {
+			return err
+		}
+	}
+	return nil
+}

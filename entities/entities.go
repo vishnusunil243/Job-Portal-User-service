@@ -70,3 +70,9 @@ type JobStatus struct {
 	Id     int
 	Status string
 }
+type Shortlist struct {
+	ID        uuid.UUID
+	UserId    uuid.UUID
+	JobId     uuid.UUID
+	Weightage float64
+}

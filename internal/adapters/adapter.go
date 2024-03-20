@@ -320,3 +320,27 @@ func (user *UserAdapter) GetExperience(userId string) (string, error) {
 	}
 	return res, nil
 }
+func (user *UserAdapter) AddToShortlist(req entities.Shortlist) error {
+	insertQuery := `INSERT INTO shortlists (id,user_id,job_id,weightage) VALUES ($1,$2,$3,$4)`
+	id := uuid.New()
+	if err := user.DB.Exec(insertQuery, id, req.UserId, req.JobId, req.Weightage).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) GetWeightage(userId, jobId string) (float64, error) {
+	var res float64
+	selectQuery := `SELECT weightage FROM jobs WHERE user_id=$1 AND job_id=$2`
+	if err := user.DB.Raw(selectQuery, userId, jobId).Scan(&res).Error; err != nil {
+		return 0, err
+	}
+	return res, nil
+}
+func (user *UserAdapter) GetShortlist(jobId string) ([]entities.Shortlist, error) {
+	var res []entities.Shortlist
+	selectQuery := `SELECT * FROM shortlists WHERE job_id=?`
+	if err := user.DB.Raw(selectQuery, jobId).Scan(&res).Error; err != nil {
+		return []entities.Shortlist{}, err
+	}
+	return res, nil
+}

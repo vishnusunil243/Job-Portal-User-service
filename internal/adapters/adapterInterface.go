@@ -44,4 +44,7 @@ type AdapterInterface interface {
 	GetAppliedUsersByJobId(jobId string) ([]entities.Jobs, error)
 	AddExperience(userId, experience string) error
 	GetExperience(userId string) (string, error)
+	AddToShortlist(req entities.Shortlist) error
+	GetWeightage(userId, jobId string) (float64, error)
+	GetShortlist(jobId string) ([]entities.Shortlist, error)
 }

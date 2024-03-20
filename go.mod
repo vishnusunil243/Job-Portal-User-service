@@ -3,10 +3,11 @@ module github.com/vishnusunil243/Job-Portal-User-service
 go 1.21.0
 
 require (
+	github.com/confluentinc/confluent-kafka-go v1.9.2
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/minio/minio-go/v7 v7.0.69
-	github.com/vishnusunil243/Job-Portal-proto-files v0.0.0-20240318131458-34955f820bda
+	github.com/vishnusunil243/Job-Portal-proto-files v0.0.0-20240318133749-d2c4537e5803
 	golang.org/x/crypto v0.19.0
 	google.golang.org/grpc v1.62.1
 	google.golang.org/protobuf v1.33.0
