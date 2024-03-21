@@ -1,13 +1,18 @@
 package entities
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type User struct {
-	ID       uuid.UUID `gorm:"primaryKey;unique;not null"`
-	Name     string
-	Email    string
-	Phone    string
-	Password string
+	ID        uuid.UUID `gorm:"primaryKey;unique;not null"`
+	Name      string
+	Email     string
+	Phone     string
+	Password  string
+	IsBlocked bool
 }
 type Profile struct {
 	ID                       uuid.UUID `gorm:"primaryKey;unique;not null"`
@@ -75,4 +80,14 @@ type Shortlist struct {
 	UserId    uuid.UUID
 	JobId     uuid.UUID
 	Weightage float64
+}
+
+type Education struct {
+	ID          uuid.UUID
+	UserId      uuid.UUID
+	User        User `gorm:"foreignKey:UserId"`
+	Degree      string
+	Institution string
+	StartDate   time.Time `gorm:"type:date"`
+	EndDate     time.Time `gorm:"type:date"`
 }

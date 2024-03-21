@@ -2,6 +2,7 @@ package helper
 
 import (
 	"fmt"
+	"time"
 	"unicode"
 
 	"golang.org/x/crypto/bcrypt"
@@ -33,4 +34,12 @@ func GetNumberInString(s string) int {
 		}
 	}
 	return num
+}
+func ConvertStringToDate(str string) (time.Time, error) {
+	layout := "02-01-2006"
+	date, err := time.Parse(layout, str)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("please provide a valid start date")
+	}
+	return date, nil
 }

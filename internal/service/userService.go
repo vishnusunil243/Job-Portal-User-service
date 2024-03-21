@@ -10,6 +10,7 @@ import (
 	"github.com/vishnusunil243/Job-Portal-User-service/internal/adapters"
 	"github.com/vishnusunil243/Job-Portal-User-service/internal/helper"
 	"github.com/vishnusunil243/Job-Portal-User-service/internal/usecases"
+	"github.com/vishnusunil243/Job-Portal-User-service/kafka"
 	"github.com/vishnusunil243/Job-Portal-proto-files/pb"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -86,6 +87,9 @@ func (user *UserService) UserLogin(ctx context.Context, req *pb.LoginRequest) (*
 	userData, err := user.adapters.GetUserByEmail(req.Email)
 	if err != nil {
 		return &pb.UserSignupResponse{}, err
+	}
+	if userData.IsBlocked {
+		return &pb.UserSignupResponse{}, fmt.Errorf("you have been blocked by the admin")
 	}
 	if userData.Email == "" {
 		return &pb.UserSignupResponse{}, fmt.Errorf("invalid credentials")
@@ -441,6 +445,9 @@ func (user *UserService) JobApply(ctx context.Context, req *pb.JobApplyRequest) 
 	if err != nil {
 		return nil, err
 	}
+	if jobData.Status == "expired" {
+		return nil, fmt.Errorf("this job opening has stopped accepting applications")
+	}
 	jobExperience := helper.GetNumberInString(jobData.Minexperience)
 	userExp, err := user.adapters.GetExperience(req.UserId)
 	if err != nil {
@@ -649,6 +656,15 @@ func (user *UserService) AddToShortlist(ctx context.Context, req *pb.AddToShortL
 		JobId:     jobID,
 		Weightage: weightage,
 	}
+
+	userData, err := user.adapters.GetUserById(req.UserId)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = kafka.ProduceShortlistUserMessage(userData.Email, "sdfa", req.UserId, req.JobId)
+	if err != nil {
+		fmt.Println(err)
+	}
 	if err := user.adapters.AddToShortlist(reqEntity); err != nil {
 		return nil, err
 	}
@@ -676,4 +692,85 @@ func (user *UserService) GetShortlist(req *pb.JobIdRequest, srv pb.UserService_G
 		}
 	}
 	return nil
+}
+func (user *UserService) AddEducation(ctx context.Context, req *pb.EducationRequest) (*emptypb.Empty, error) {
+	userId, err := uuid.Parse(req.UserId)
+	if err != nil {
+		return nil, err
+	}
+	start, err := helper.ConvertStringToDate(req.StartDate)
+	if err != nil {
+		return nil, fmt.Errorf("please provide a valid start date")
+	}
+	end, err := helper.ConvertStringToDate(req.EndDate)
+	if err != nil {
+		return nil, err
+	}
+	reqEntity := entities.Education{
+		Degree:      req.Degree,
+		Institution: req.Institution,
+		UserId:      userId,
+		StartDate:   start,
+		EndDate:     end,
+	}
+	if err := user.adapters.AddEducation(reqEntity); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+func (user *UserService) EditEducation(ctx context.Context, req *pb.EducationResponse) (*emptypb.Empty, error) {
+	Id, err := uuid.Parse(req.Id)
+	if err != nil {
+		return nil, err
+	}
+	start, err := helper.ConvertStringToDate(req.StartDate)
+	if err != nil {
+		return nil, fmt.Errorf("please provide a valid start date")
+	}
+	end, err := helper.ConvertStringToDate(req.EndDate)
+	if err != nil {
+		return nil, err
+	}
+	reqEntity := entities.Education{
+		ID:          Id,
+		Degree:      req.Degree,
+		Institution: req.Institution,
+		StartDate:   start,
+		EndDate:     end,
+	}
+	if err := user.adapters.EditEducation(reqEntity); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+func (user *UserService) GetEducation(req *pb.GetUserById, srv pb.UserService_GetEducationServer) error {
+	educations, err := user.adapters.GetEducation(req.Id)
+	if err != nil {
+		return err
+	}
+	for _, education := range educations {
+		res := &pb.EducationResponse{
+			Id:          education.ID.String(),
+			Degree:      education.Degree,
+			Institution: education.Institution,
+			StartDate:   education.StartDate.String(),
+			EndDate:     education.EndDate.String(),
+		}
+		if err := srv.Send(res); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (user *UserService) BlockUser(ctx context.Context, req *pb.GetUserById) (*emptypb.Empty, error) {
+	if err := user.adapters.AddToBlockList(req.Id); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+func (user *UserService) UnblockUser(ctx context.Context, req *pb.GetUserById) (*emptypb.Empty, error) {
+	if err := user.adapters.RemoveFromBlockList(req.Id); err != nil {
+		return nil, err
+	}
+	return nil, nil
 }

@@ -267,7 +267,7 @@ func (user *UserAdapter) UploadProfileImage(image, profileId string) (string, er
 }
 func (user *UserAdapter) GetProfilePic(profileId string) (string, error) {
 	var res string
-	selectQuery := `SELECT image FROM profiles WHERE id=$1`
+	selectQuery := `SELECT image FROM profiles WHERE id=$1 AND image NOT IN (NULL)`
 	if err := user.DB.Raw(selectQuery, profileId).Scan(&res).Error; err != nil {
 		return "", err
 	}
@@ -343,4 +343,49 @@ func (user *UserAdapter) GetShortlist(jobId string) ([]entities.Shortlist, error
 		return []entities.Shortlist{}, err
 	}
 	return res, nil
+}
+func (user *UserAdapter) AddEducation(req entities.Education) error {
+	id := uuid.New()
+	insertQuery := `INSERT INTO educations (id,degree,institution,start_date,end_date,user_id) VALUES ($1,$2,$3,$4,$5,$6)`
+	if err := user.DB.Exec(insertQuery, id, req.Degree, req.Institution, req.StartDate, req.EndDate, req.UserId).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) EditEducation(req entities.Education) error {
+	updateQuery := `UPDATE educations SET degree=$1,institution=$2,start_date=$3,end_date=$4 WHERE id=$5`
+	if err := user.DB.Exec(updateQuery, req.Degree, req.Institution, req.StartDate, req.EndDate, req.ID).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) GetEducation(userId string) ([]entities.Education, error) {
+	selectQuery := `SELECT * FROM educations WHERE user_id=?`
+	var res []entities.Education
+	if err := user.DB.Raw(selectQuery, userId).Scan(&res).Error; err != nil {
+		return []entities.Education{}, err
+	}
+	return res, nil
+}
+func (user *UserAdapter) AddToBlockList(userId string) error {
+	updateQuery := `UPDATE users SET is_blocked=true WHERE id=?`
+	if err := user.DB.Exec(updateQuery, userId).Error; err != nil {
+		return err
+	}
+	return nil
+
+}
+func (user *UserAdapter) RemoveFromBlockList(userId string) error {
+	updateQuery := `UPDATE users SET is_blocked=false WHERE id=?`
+	if err := user.DB.Exec(updateQuery, userId).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) DeleteEducation(edId string) error {
+	deleteQuery := `DELETE FROM educations WHERE id=?`
+	if err := user.DB.Exec(deleteQuery, edId).Error; err != nil {
+		return err
+	}
+	return nil
 }

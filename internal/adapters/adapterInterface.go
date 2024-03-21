@@ -47,4 +47,10 @@ type AdapterInterface interface {
 	AddToShortlist(req entities.Shortlist) error
 	GetWeightage(userId, jobId string) (float64, error)
 	GetShortlist(jobId string) ([]entities.Shortlist, error)
+	AddEducation(req entities.Education) error
+	EditEducation(req entities.Education) error
+	DeleteEducation(edId string) error
+	GetEducation(userId string) ([]entities.Education, error)
+	AddToBlockList(userId string) error
+	RemoveFromBlockList(userId string) error
 }

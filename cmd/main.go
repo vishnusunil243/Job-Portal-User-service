@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -14,6 +15,7 @@ import (
 )
 
 func main() {
+	fmt.Println("main function")
 	if err := godotenv.Load("../.env"); err != nil {
 		log.Fatalf(err.Error())
 	}
@@ -29,6 +31,7 @@ func main() {
 	defer func() {
 		companyConn.Close()
 	}()
+
 	companyRes := pb.NewCompanyServiceClient(companyConn)
 	service.CompanyClient = companyRes
 	services := initializer.Initializer(DB)

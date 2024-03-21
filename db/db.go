@@ -24,5 +24,6 @@ func InitDB(connectTo string) (*gorm.DB, error) {
 	db.AutoMigrate(&entities.Jobs{})
 	db.AutoMigrate(&entities.JobStatus{})
 	db.AutoMigrate(&entities.Shortlist{})
+	db.AutoMigrate(&entities.Education{})
 	return db, nil
 }
