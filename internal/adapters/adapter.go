@@ -422,3 +422,15 @@ func (user *UserAdapter) GetInterviewsForUser(userId string) ([]entities.Shortli
 	return res, nil
 
 }
+func (user *UserAdapter) ReportUser(userId string) error {
+	var reportCount int
+	selectReortCount := `SELECT COALESCE(report_count,0) FROM users WHERE id=?`
+	if err := user.DB.Raw(selectReortCount, userId).Scan(&reportCount).Error; err != nil {
+		return err
+	}
+	updateQuery := `UPDATE users SET report_count=$1 WHERE id=$2`
+	if err := user.DB.Exec(updateQuery, reportCount+1, userId).Error; err != nil {
+		return err
+	}
+	return nil
+}

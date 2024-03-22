@@ -7,12 +7,13 @@ import (
 )
 
 type User struct {
-	ID        uuid.UUID `gorm:"primaryKey;unique;not null"`
-	Name      string
-	Email     string
-	Phone     string
-	Password  string
-	IsBlocked bool
+	ID          uuid.UUID `gorm:"primaryKey;unique;not null"`
+	Name        string
+	Email       string
+	Phone       string
+	Password    string
+	IsBlocked   bool
+	ReportCount int
 }
 type Profile struct {
 	ID                       uuid.UUID `gorm:"primaryKey;unique;not null"`

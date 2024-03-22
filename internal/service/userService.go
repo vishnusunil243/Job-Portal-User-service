@@ -880,3 +880,9 @@ func (user *UserService) GetInterviewsForUser(req *pb.GetUserById, srv pb.UserSe
 	}
 	return nil
 }
+func (user *UserService) ReportUser(ctx context.Context, req *pb.GetUserById) (*emptypb.Empty, error) {
+	if err := user.adapters.ReportUser(req.Id); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}

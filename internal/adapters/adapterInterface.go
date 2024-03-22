@@ -59,4 +59,5 @@ type AdapterInterface interface {
 	UpdateAppliedJobStatus(statusId int, jobId, userId string) error
 	GetInterviewsForUser(userId string) ([]entities.Shortlist, error)
 	GetShortlistByUserIdAndJobId(userId, jobId string) (entities.Shortlist, error)
+	ReportUser(userId string) error
 }

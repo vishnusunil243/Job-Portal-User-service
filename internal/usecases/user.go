@@ -78,14 +78,14 @@ func (user *UserUseCase) JobApply(req entities.Jobs, jobskills []*pb.JobSkillRes
 	}
 	var expPoint float64
 	if count <= 0 {
-		req.Weightage = 0
+		req.Weightage = float64(userExp) * 60 / 100
 	} else {
 		if userExp != 0 && jobExp != 0 {
 			expPoint = float64(userExp) / float64(jobExp)
 		} else if userExp != 0 && jobExp == 0 {
 			expPoint = float64(userExp)
 		}
-		req.Weightage = float64(count)/float64(len(jobSkillMap))*40/100 + expPoint*60/100
+		req.Weightage = (float64(count)/float64(len(jobSkillMap)))*40/100 + expPoint*60/100
 	}
 	err = user.userAdapter.JobApply(req)
 	if err != nil {
