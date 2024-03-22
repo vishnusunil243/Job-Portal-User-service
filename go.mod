@@ -7,7 +7,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/minio/minio-go/v7 v7.0.69
-	github.com/vishnusunil243/Job-Portal-proto-files v0.0.0-20240321174124-86fe071bb27d
+	github.com/vishnusunil243/Job-Portal-proto-files v0.0.0-20240322105419-f33b7b225f41
 	golang.org/x/crypto v0.19.0
 	google.golang.org/grpc v1.62.1
 	google.golang.org/protobuf v1.33.0

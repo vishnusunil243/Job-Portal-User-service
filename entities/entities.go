@@ -76,10 +76,11 @@ type JobStatus struct {
 	Status string
 }
 type Shortlist struct {
-	ID        uuid.UUID
-	UserId    uuid.UUID
-	JobId     uuid.UUID
-	Weightage float64
+	ID            uuid.UUID
+	UserId        uuid.UUID
+	JobId         uuid.UUID
+	Weightage     float64
+	InterviewDate time.Time `gorm:"type:date"`
 }
 
 type Education struct {

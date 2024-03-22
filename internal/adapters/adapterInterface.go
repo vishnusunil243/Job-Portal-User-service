@@ -1,6 +1,8 @@
 package adapters
 
 import (
+	"time"
+
 	"github.com/vishnusunil243/Job-Portal-User-service/entities"
 	"github.com/vishnusunil243/Job-Portal-User-service/entities/helperstruct"
 )
@@ -38,7 +40,7 @@ type AdapterInterface interface {
 	GetAddressByProfileId(profileId string) (entities.Address, error)
 	UploadProfileImage(Image, ProfileId string) (string, error)
 	GetProfilePic(string) (string, error)
-	GetAppliedJobIds(string) ([]string, error)
+	GetAppliedJobs(string) ([]helperstruct.JobHelper, error)
 	GetAppliedJob(string, string) (entities.Jobs, error)
 	GetUserSkillById(string, int) (entities.UserSkill, error)
 	GetAppliedUsersByJobId(jobId string) ([]entities.Jobs, error)
@@ -53,4 +55,8 @@ type AdapterInterface interface {
 	GetEducation(userId string) ([]entities.Education, error)
 	AddToBlockList(userId string) error
 	RemoveFromBlockList(userId string) error
+	InterviewSchedule(userId, jobId string, date time.Time) error
+	UpdateAppliedJobStatus(statusId int, jobId, userId string) error
+	GetInterviewsForUser(userId string) ([]entities.Shortlist, error)
+	GetShortlistByUserIdAndJobId(userId, jobId string) (entities.Shortlist, error)
 }

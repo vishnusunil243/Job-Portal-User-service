@@ -1,6 +1,8 @@
 package adapters
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/vishnusunil243/Job-Portal-User-service/entities"
 	"github.com/vishnusunil243/Job-Portal-User-service/entities/helperstruct"
@@ -273,11 +275,11 @@ func (user *UserAdapter) GetProfilePic(profileId string) (string, error) {
 	}
 	return res, nil
 }
-func (user *UserAdapter) GetAppliedJobIds(userId string) ([]string, error) {
-	var res []string
-	selectQuery := `SELECT job_id FROM jobs WHERE user_id=$1 AND job_status_id=1`
+func (user *UserAdapter) GetAppliedJobs(userId string) ([]helperstruct.JobHelper, error) {
+	var res []helperstruct.JobHelper
+	selectQuery := `SELECT j.job_id,js.status FROM jobs j JOIN job_statuses js ON j.job_status_id=js.id WHERE user_id=$1`
 	if err := user.DB.Raw(selectQuery, userId).Scan(&res).Error; err != nil {
-		return []string{}, err
+		return []helperstruct.JobHelper{}, err
 	}
 	return res, nil
 }
@@ -359,6 +361,14 @@ func (user *UserAdapter) EditEducation(req entities.Education) error {
 	}
 	return nil
 }
+func (user *UserAdapter) GetShortlistByUserIdAndJobId(userId, jobId string) (entities.Shortlist, error) {
+	var res entities.Shortlist
+	selectQuery := `SELECT * FROM shortlists WHERE user_id=$1 AND job_id=$2`
+	if err := user.DB.Raw(selectQuery, userId, jobId).Scan(&res).Error; err != nil {
+		return entities.Shortlist{}, err
+	}
+	return res, nil
+}
 func (user *UserAdapter) GetEducation(userId string) ([]entities.Education, error) {
 	selectQuery := `SELECT * FROM educations WHERE user_id=?`
 	var res []entities.Education
@@ -388,4 +398,27 @@ func (user *UserAdapter) DeleteEducation(edId string) error {
 		return err
 	}
 	return nil
+}
+func (user *UserAdapter) UpdateAppliedJobStatus(statusId int, jobId, userId string) error {
+	updateQuery := `UPDATE jobs SET job_status_id=$1 WHERE user_id=$2 AND job_id=$3`
+	if err := user.DB.Exec(updateQuery, statusId, userId, jobId).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) InterviewSchedule(userId, jobId string, date time.Time) error {
+	scheduleInterviewQuery := `UPDATE shortlists SET interview_date=$1 WHERE user_id=$2 AND job_id=$3`
+	if err := user.DB.Exec(scheduleInterviewQuery, date, userId, jobId).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) GetInterviewsForUser(userId string) ([]entities.Shortlist, error) {
+	var res []entities.Shortlist
+	selectInterviews := `SELECT * FROM shortlists WHERE interview_date IS NOT NULL AND user_id=$1`
+	if err := user.DB.Raw(selectInterviews, userId).Scan(&res).Error; err != nil {
+		return []entities.Shortlist{}, err
+	}
+	return res, nil
+
 }

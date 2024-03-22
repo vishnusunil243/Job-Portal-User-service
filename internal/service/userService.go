@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/vishnusunil243/Job-Portal-User-service/entities"
@@ -16,7 +18,8 @@ import (
 )
 
 var (
-	CompanyClient pb.CompanyServiceClient
+	CompanyClient      pb.CompanyServiceClient
+	NotificationClient pb.EmailServiceClient
 )
 
 type UserService struct {
@@ -593,13 +596,22 @@ func (user *UserService) UserGetProfilePic(ctx context.Context, req *pb.GetUserB
 	}, nil
 }
 func (user *UserService) UserAppliedJobs(req *pb.GetUserById, srv pb.UserService_UserAppliedJobsServer) error {
-	jobIds, err := user.adapters.GetAppliedJobIds(req.Id)
+	jobs, err := user.adapters.GetAppliedJobs(req.Id)
 	if err != nil {
 		return err
 	}
-	for _, jobId := range jobIds {
-		res := &pb.JobApplyRequest{
-			JobId: jobId,
+	for _, job := range jobs {
+		jobData, err := CompanyClient.GetJob(context.Background(), &pb.GetJobById{
+			Id: job.JobId.String(),
+		})
+		if err != nil {
+			return err
+		}
+		res := &pb.AppliedJobResponse{
+			JobId:       job.JobId.String(),
+			Designation: jobData.Designation,
+			Company:     jobData.Company,
+			Status:      job.Status,
 		}
 		if err := srv.Send(res); err != nil {
 			return err
@@ -643,6 +655,13 @@ func (user *UserService) AddToShortlist(ctx context.Context, req *pb.AddToShortL
 	if err != nil {
 		return nil, err
 	}
+	check, err := user.adapters.GetShortlistByUserIdAndJobId(req.UserId, req.JobId)
+	if err != nil {
+		return nil, err
+	}
+	if check.UserId != uuid.Nil {
+		return nil, fmt.Errorf("this user is already added")
+	}
 	userID, err := uuid.Parse(req.UserId)
 	if err != nil {
 		return nil, err
@@ -656,12 +675,30 @@ func (user *UserService) AddToShortlist(ctx context.Context, req *pb.AddToShortL
 		JobId:     jobID,
 		Weightage: weightage,
 	}
-
+	if err := user.adapters.UpdateAppliedJobStatus(2, req.JobId, req.UserId); err != nil {
+		return nil, err
+	}
+	jobData, err := CompanyClient.GetJob(context.Background(), &pb.GetJobById{
+		Id: req.JobId,
+	})
+	if err != nil {
+		return nil, err
+	}
 	userData, err := user.adapters.GetUserById(req.UserId)
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = kafka.ProduceShortlistUserMessage(userData.Email, "sdfa", req.UserId, req.JobId)
+	go func() {
+		_, err = NotificationClient.AddNotification(context.Background(), &pb.AddNotificationRequest{
+			UserId:  req.UserId,
+			Message: fmt.Sprintf(`{"message": "congrats you have been shortlisted for the position %s at company %s"}`, jobData.Designation, jobData.Company),
+		})
+		if err != nil {
+			log.Print("error while sending notification ", err)
+		}
+		fmt.Println("notification sent.............")
+	}()
+	err = kafka.ProduceShortlistUserMessage(userData.Email, jobData.Company, jobData.Designation, req.JobId)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -773,4 +810,73 @@ func (user *UserService) UnblockUser(ctx context.Context, req *pb.GetUserById) (
 		return nil, err
 	}
 	return nil, nil
+}
+func (user *UserService) RemoveEducation(ctx context.Context, req *pb.EducationById) (*emptypb.Empty, error) {
+	if req.EducationId == "" {
+		return nil, fmt.Errorf("please provide a valid education id")
+	}
+	if err := user.adapters.DeleteEducation(req.EducationId); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (user *UserService) InterviewScheduleForUser(ctx context.Context, req *pb.InterviewScheduleRequest) (*emptypb.Empty, error) {
+	date, err := helper.ConvertStringToDate(req.Date)
+	if err != nil {
+		return nil, err
+	}
+	if time.Now().Before(date) {
+		return nil, fmt.Errorf("please provide a valid date")
+	}
+	if err := user.adapters.UpdateAppliedJobStatus(3, req.JobId, req.UserId); err != nil {
+		return nil, err
+	}
+	jobData, err := CompanyClient.GetJob(context.Background(), &pb.GetJobById{
+		Id: req.JobId,
+	})
+	if err != nil {
+		return nil, err
+	}
+	userData, err := user.adapters.GetUserById(req.UserId)
+	if err != nil {
+		log.Print("error getting user id")
+	}
+	go func() {
+		NotificationClient.AddNotification(context.Background(), &pb.AddNotificationRequest{
+			UserId:  req.UserId,
+			Message: fmt.Sprintf(`{"message": "interview has been scheduled for %s by %s for the position of %s"}`, req.Date, jobData.Company, jobData.Designation),
+		})
+	}()
+	if err := kafka.InterviewScheduledMessage(userData.Email, jobData.Company, req.Date, jobData.Designation); err != nil {
+		log.Print("error while sending notifications", err)
+	}
+	if err := user.adapters.InterviewSchedule(req.UserId, req.JobId, date); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+func (user *UserService) GetInterviewsForUser(req *pb.GetUserById, srv pb.UserService_GetInterviewsForUserServer) error {
+	users, err := user.adapters.GetInterviewsForUser(req.Id)
+	if err != nil {
+		return err
+	}
+	for _, user := range users {
+		jobData, err := CompanyClient.GetJob(context.Background(), &pb.GetJobById{
+			Id: user.JobId.String(),
+		})
+		if err != nil {
+			return err
+		}
+		res := &pb.InterviewResponse{
+			JobId:       user.JobId.String(),
+			Designation: jobData.Designation,
+			Company:     jobData.Company,
+			Date:        user.InterviewDate.String(),
+		}
+		if err := srv.Send(res); err != nil {
+			return err
+		}
+	}
+	return nil
 }

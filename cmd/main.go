@@ -28,11 +28,18 @@ func main() {
 	if err != nil {
 		log.Fatal("error connecting to company service")
 	}
+	emailConn, err := grpc.Dial("localhost:8087", grpc.WithInsecure())
+	if err != nil {
+		log.Fatal("error while connecting to notification service")
+	}
 	defer func() {
 		companyConn.Close()
+		emailConn.Close()
 	}()
 
 	companyRes := pb.NewCompanyServiceClient(companyConn)
+	notificationRes := pb.NewEmailServiceClient(emailConn)
+	service.NotificationClient = notificationRes
 	service.CompanyClient = companyRes
 	services := initializer.Initializer(DB)
 	server := grpc.NewServer()
