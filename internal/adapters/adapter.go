@@ -21,7 +21,7 @@ func NewUserAdapter(db *gorm.DB) *UserAdapter {
 func (user *UserAdapter) UserSignup(userData entities.User) (entities.User, error) {
 	var res entities.User
 	id := uuid.New()
-	insertQuery := `INSERT INTO users (id,name,email,password,phone) VALUES ($1,$2,$3,$4,$5) RETURNING *`
+	insertQuery := `INSERT INTO users (id,name,email,password,phone,created_at) VALUES ($1,$2,$3,$4,$5,NOW()) RETURNING *`
 	if err := user.DB.Raw(insertQuery, id, userData.Name, userData.Email, userData.Password, userData.Phone).Scan(&res).Error; err != nil {
 		return entities.User{}, err
 	}
@@ -399,16 +399,23 @@ func (user *UserAdapter) DeleteEducation(edId string) error {
 	}
 	return nil
 }
-func (user *UserAdapter) UpdateAppliedJobStatus(statusId int, jobId, userId string) error {
-	updateQuery := `UPDATE jobs SET job_status_id=$1 WHERE user_id=$2 AND job_id=$3`
-	if err := user.DB.Exec(updateQuery, statusId, userId, jobId).Error; err != nil {
-		return err
+func (user *UserAdapter) UpdateAppliedJobStatus(statusId int, jobId, userId string, date time.Time) error {
+	if statusId != 3 {
+		updateQuery := `UPDATE jobs SET job_status_id=$1 WHERE user_id=$2 AND job_id=$3`
+		if err := user.DB.Exec(updateQuery, statusId, userId, jobId).Error; err != nil {
+			return err
+		}
+	} else {
+		updateQuery := `UPDATE jobs SET job_status_id=3,interview_date=$1 WHERE user_id=$2 AND job_id=$3`
+		if err := user.DB.Exec(updateQuery, date, userId, jobId).Error; err != nil {
+			return err
+		}
 	}
 	return nil
 }
-func (user *UserAdapter) InterviewSchedule(userId, jobId string, date time.Time) error {
-	scheduleInterviewQuery := `UPDATE shortlists SET interview_date=$1 WHERE user_id=$2 AND job_id=$3`
-	if err := user.DB.Exec(scheduleInterviewQuery, date, userId, jobId).Error; err != nil {
+func (user *UserAdapter) InterviewSchedule(userId, jobId, roomId string, date time.Time) error {
+	scheduleInterviewQuery := `UPDATE shortlists SET interview_date=$1,room_id=$2,warning_sent=false WHERE user_id=$3 AND job_id=$4`
+	if err := user.DB.Exec(scheduleInterviewQuery, date, roomId, userId, jobId).Error; err != nil {
 		return err
 	}
 	return nil
@@ -430,6 +437,28 @@ func (user *UserAdapter) ReportUser(userId string) error {
 	}
 	updateQuery := `UPDATE users SET report_count=$1 WHERE id=$2`
 	if err := user.DB.Exec(updateQuery, reportCount+1, userId).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) HireUser(userId, jobId string) error {
+	updateQuery := `UPDATE shortlists SET status='hired' WHERE user_id=$1 AND job_id=$2`
+	if err := user.DB.Exec(updateQuery, userId, jobId).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) GetInterview(userId, jobId string) (entities.Shortlist, error) {
+	selectQuery := `SELECT * FROM shortlists WHERE user_id=$1 AND job_id=$2`
+	var shrtlistInfo entities.Shortlist
+	if err := user.DB.Raw(selectQuery, userId, jobId).Scan(&shrtlistInfo).Error; err != nil {
+		return entities.Shortlist{}, err
+	}
+	return shrtlistInfo, nil
+}
+func (user *UserAdapter) UpdateSubscription(userId string, subscribed bool) error {
+	updateQuery := `UPDATE users SET subscribed=$1 WHERE id=$2`
+	if err := user.DB.Exec(updateQuery, subscribed, userId).Error; err != nil {
 		return err
 	}
 	return nil

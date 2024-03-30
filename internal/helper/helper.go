@@ -5,6 +5,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -37,6 +38,17 @@ func GetNumberInString(s string) int {
 }
 func ConvertStringToDate(str string) (time.Time, error) {
 	layout := "02-01-2006"
+	date, err := time.Parse(layout, str)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("please provide a valid start date")
+	}
+	return date, nil
+}
+func GenerateRoomId() string {
+	return uuid.New().String()
+}
+func ConvertStringToTimeStamp(str string) (time.Time, error) {
+	layout := "2006-01-02T15:04:05.000Z"
 	date, err := time.Parse(layout, str)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("please provide a valid start date")

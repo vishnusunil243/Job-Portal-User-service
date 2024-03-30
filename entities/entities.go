@@ -14,6 +14,8 @@ type User struct {
 	Password    string
 	IsBlocked   bool
 	ReportCount int
+	CreatedAt   time.Time
+	Subscribed  bool
 }
 type Profile struct {
 	ID                       uuid.UUID `gorm:"primaryKey;unique;not null"`
@@ -64,13 +66,14 @@ type Admin struct {
 	Phone    string
 }
 type Jobs struct {
-	Id          uuid.UUID
-	UserId      uuid.UUID
-	JobId       string
-	User        User `gorm:"foreignKey:UserId"`
-	JobStatusId int
-	JobStatus   JobStatus `gorm:"foreignKey:JobStatusId"`
-	Weightage   float64
+	Id            uuid.UUID
+	UserId        uuid.UUID
+	JobId         string
+	User          User `gorm:"foreignKey:UserId"`
+	JobStatusId   int
+	JobStatus     JobStatus `gorm:"foreignKey:JobStatusId"`
+	Weightage     float64
+	InterviewDate time.Time
 }
 type JobStatus struct {
 	Id     int
@@ -81,7 +84,10 @@ type Shortlist struct {
 	UserId        uuid.UUID
 	JobId         uuid.UUID
 	Weightage     float64
-	InterviewDate time.Time `gorm:"type:date"`
+	InterviewDate time.Time
+	RoomId        string
+	Status        string
+	WarningSent   bool
 }
 
 type Education struct {

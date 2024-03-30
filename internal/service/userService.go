@@ -91,6 +91,7 @@ func (user *UserService) UserLogin(ctx context.Context, req *pb.LoginRequest) (*
 	if err != nil {
 		return &pb.UserSignupResponse{}, err
 	}
+
 	if userData.IsBlocked {
 		return &pb.UserSignupResponse{}, fmt.Errorf("you have been blocked by the admin")
 	}
@@ -99,6 +100,9 @@ func (user *UserService) UserLogin(ctx context.Context, req *pb.LoginRequest) (*
 	}
 	if !helper.CompareHashedPassword(userData.Password, req.Password) {
 		return &pb.UserSignupResponse{}, fmt.Errorf("invalid credentials please try again")
+	}
+	if !userData.Subscribed && time.Since(userData.CreatedAt).Hours() > 24*30*3 {
+		return &pb.UserSignupResponse{}, fmt.Errorf("please subscribe to continue using the service")
 	}
 	return &pb.UserSignupResponse{
 		Id:    userData.ID.String(),
@@ -675,7 +679,7 @@ func (user *UserService) AddToShortlist(ctx context.Context, req *pb.AddToShortL
 		JobId:     jobID,
 		Weightage: weightage,
 	}
-	if err := user.adapters.UpdateAppliedJobStatus(2, req.JobId, req.UserId); err != nil {
+	if err := user.adapters.UpdateAppliedJobStatus(2, req.JobId, req.UserId, time.Time{}); err != nil {
 		return nil, err
 	}
 	jobData, err := CompanyClient.GetJob(context.Background(), &pb.GetJobById{
@@ -822,14 +826,14 @@ func (user *UserService) RemoveEducation(ctx context.Context, req *pb.EducationB
 }
 
 func (user *UserService) InterviewScheduleForUser(ctx context.Context, req *pb.InterviewScheduleRequest) (*emptypb.Empty, error) {
-	date, err := helper.ConvertStringToDate(req.Date)
+	date, err := helper.ConvertStringToTimeStamp(req.Date)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("please provide date and time in the required format")
 	}
-	if time.Now().Before(date) {
+	if time.Now().After(date) {
 		return nil, fmt.Errorf("please provide a valid date")
 	}
-	if err := user.adapters.UpdateAppliedJobStatus(3, req.JobId, req.UserId); err != nil {
+	if err := user.adapters.UpdateAppliedJobStatus(3, req.JobId, req.UserId, date); err != nil {
 		return nil, err
 	}
 	jobData, err := CompanyClient.GetJob(context.Background(), &pb.GetJobById{
@@ -842,16 +846,18 @@ func (user *UserService) InterviewScheduleForUser(ctx context.Context, req *pb.I
 	if err != nil {
 		log.Print("error getting user id")
 	}
+	roomId := helper.GenerateRoomId()
 	go func() {
 		NotificationClient.AddNotification(context.Background(), &pb.AddNotificationRequest{
 			UserId:  req.UserId,
-			Message: fmt.Sprintf(`{"message": "interview has been scheduled for %s by %s for the position of %s"}`, req.Date, jobData.Company, jobData.Designation),
+			Message: fmt.Sprintf(`{"message": "interview has been scheduled for %s by %s for the position of %s AND your roomId for the interview is %s"}`, req.Date, jobData.Company, jobData.Designation, roomId),
 		})
 	}()
-	if err := kafka.InterviewScheduledMessage(userData.Email, jobData.Company, req.Date, jobData.Designation); err != nil {
+	if err := kafka.InterviewScheduledMessage(userData.Email, jobData.Company, req.Date, jobData.Designation, roomId); err != nil {
 		log.Print("error while sending notifications", err)
 	}
-	if err := user.adapters.InterviewSchedule(req.UserId, req.JobId, date); err != nil {
+
+	if err := user.adapters.InterviewSchedule(req.UserId, req.JobId, roomId, date); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -873,6 +879,7 @@ func (user *UserService) GetInterviewsForUser(req *pb.GetUserById, srv pb.UserSe
 			Designation: jobData.Designation,
 			Company:     jobData.Company,
 			Date:        user.InterviewDate.String(),
+			RoomId:      user.RoomId,
 		}
 		if err := srv.Send(res); err != nil {
 			return err
@@ -882,6 +889,47 @@ func (user *UserService) GetInterviewsForUser(req *pb.GetUserById, srv pb.UserSe
 }
 func (user *UserService) ReportUser(ctx context.Context, req *pb.GetUserById) (*emptypb.Empty, error) {
 	if err := user.adapters.ReportUser(req.Id); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+func (user *UserService) HireUser(ctx context.Context, req *pb.AddToShortListRequest) (*emptypb.Empty, error) {
+	if err := user.adapters.UpdateAppliedJobStatus(4, req.JobId, req.UserId, time.Time{}); err != nil {
+		return nil, err
+	}
+	if err := user.adapters.HireUser(req.UserId, req.JobId); err != nil {
+		return nil, err
+	}
+	go func() {
+		userData, err := user.adapters.GetUserById(req.UserId)
+		if err != nil {
+			log.Println("error retrieving userData")
+		}
+		jobData, err := CompanyClient.GetJob(context.Background(), &pb.GetJobById{
+			Id: req.JobId,
+		})
+		if err != nil {
+			log.Print("errror retrieving job information ", err)
+		}
+		interview, err := user.adapters.GetInterview(req.UserId, req.JobId)
+		if err != nil {
+			log.Print("error while retrieving interview ", err)
+		}
+		fmt.Println(jobData)
+		if err := kafka.HiredMessage(userData.Email, jobData.Company, jobData.Designation, interview.InterviewDate.String()); err != nil {
+			log.Println("error while sending hiring message ", err)
+		}
+		if _, err := NotificationClient.AddNotification(context.Background(), &pb.AddNotificationRequest{
+			UserId:  req.UserId,
+			Message: fmt.Sprintf(`{"message": "Congrats you have been hired for the position %s at %s"}`, jobData.Designation, jobData.Company),
+		}); err != nil {
+			log.Println("error while sending notifications")
+		}
+	}()
+	return nil, nil
+}
+func (user *UserService) UpdateSubscription(ctx context.Context, req *pb.UpdateSubscriptionRequest) (*emptypb.Empty, error) {
+	if err := user.adapters.UpdateSubscription(req.UserId, req.Subscription); err != nil {
 		return nil, err
 	}
 	return nil, nil

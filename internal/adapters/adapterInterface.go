@@ -55,9 +55,12 @@ type AdapterInterface interface {
 	GetEducation(userId string) ([]entities.Education, error)
 	AddToBlockList(userId string) error
 	RemoveFromBlockList(userId string) error
-	InterviewSchedule(userId, jobId string, date time.Time) error
-	UpdateAppliedJobStatus(statusId int, jobId, userId string) error
+	InterviewSchedule(userId, jobId, roomId string, date time.Time) error
+	UpdateAppliedJobStatus(statusId int, jobId, userId string, date time.Time) error
 	GetInterviewsForUser(userId string) ([]entities.Shortlist, error)
 	GetShortlistByUserIdAndJobId(userId, jobId string) (entities.Shortlist, error)
+	HireUser(userId, jobId string) error
 	ReportUser(userId string) error
+	GetInterview(userId, jobId string) (entities.Shortlist, error)
+	UpdateSubscription(userId string, subscribed bool) error
 }
