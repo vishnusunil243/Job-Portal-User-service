@@ -727,6 +727,7 @@ func (user *UserService) GetShortlist(req *pb.JobIdRequest, srv pb.UserService_G
 			Email:     userData.Email,
 			Phone:     userData.Phone,
 			Weightage: float32(shortlist.Weightage),
+			Status:    shortlist.Status,
 		}
 		if err := srv.Send(res); err != nil {
 			return err
@@ -894,10 +895,25 @@ func (user *UserService) ReportUser(ctx context.Context, req *pb.GetUserById) (*
 	return nil, nil
 }
 func (user *UserService) HireUser(ctx context.Context, req *pb.AddToShortListRequest) (*emptypb.Empty, error) {
+	shrtlist, err := user.adapters.GetShortlistByUserIdAndJobId(req.UserId, req.JobId)
+	if err != nil {
+		return nil, err
+	}
+	if shrtlist.JobId.String() == "" {
+		return nil, fmt.Errorf("this user is not present in shortlist")
+	}
+	if shrtlist.Status == "hired" {
+		return nil, fmt.Errorf("this user is already hired")
+	}
 	if err := user.adapters.UpdateAppliedJobStatus(4, req.JobId, req.UserId, time.Time{}); err != nil {
 		return nil, err
 	}
 	if err := user.adapters.HireUser(req.UserId, req.JobId); err != nil {
+		return nil, err
+	}
+	if _, err := CompanyClient.UpdateHired(context.Background(), &pb.GetJobById{
+		Id: req.JobId,
+	}); err != nil {
 		return nil, err
 	}
 	go func() {

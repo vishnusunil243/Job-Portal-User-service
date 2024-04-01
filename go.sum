@@ -124,6 +124,10 @@ github.com/vishnusunil243/Job-Portal-proto-files v0.0.0-20240329162539-14748c6bd
 github.com/vishnusunil243/Job-Portal-proto-files v0.0.0-20240329162539-14748c6bddf6/go.mod h1:HrgijLpWtziSIZNoLPNoNu+2HOxMfiGEvG32elFR5mE=
 github.com/vishnusunil243/Job-Portal-proto-files v0.0.0-20240330034235-988336985d16 h1:0zkAoaInkK43rlWwwem1TD/YYeOpca3g5qMyzhEyp+M=
 github.com/vishnusunil243/Job-Portal-proto-files v0.0.0-20240330034235-988336985d16/go.mod h1:HrgijLpWtziSIZNoLPNoNu+2HOxMfiGEvG32elFR5mE=
+github.com/vishnusunil243/Job-Portal-proto-files v0.0.0-20240401125618-f7e25bf66c44 h1:cQxmV5QAQR7wqJlDaLdfL9w3c7/pWX7erM+UK9QF8Ds=
+github.com/vishnusunil243/Job-Portal-proto-files v0.0.0-20240401125618-f7e25bf66c44/go.mod h1:HrgijLpWtziSIZNoLPNoNu+2HOxMfiGEvG32elFR5mE=
+github.com/vishnusunil243/Job-Portal-proto-files v0.0.0-20240401132046-621d2a0e784d h1:s3RkXr6srhZgUGEcCFU6ZV9u31UGsnN4pO57Fn/4mb0=
+github.com/vishnusunil243/Job-Portal-proto-files v0.0.0-20240401132046-621d2a0e784d/go.mod h1:HrgijLpWtziSIZNoLPNoNu+2HOxMfiGEvG32elFR5mE=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
