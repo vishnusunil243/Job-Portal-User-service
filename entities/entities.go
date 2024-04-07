@@ -99,3 +99,12 @@ type Education struct {
 	StartDate   time.Time `gorm:"type:date"`
 	EndDate     time.Time `gorm:"type:date"`
 }
+type Project struct {
+	Id          uuid.UUID
+	UserId      uuid.UUID
+	User        User `gorm:"foreignKey:UserId"`
+	Name        string
+	Description string
+	Image       string
+	Link        string
+}

@@ -950,3 +950,73 @@ func (user *UserService) UpdateSubscription(ctx context.Context, req *pb.UpdateS
 	}
 	return nil, nil
 }
+func (user *UserService) AddProject(ctx context.Context, req *pb.AddProjectRequest) (*emptypb.Empty, error) {
+	userId, err := uuid.Parse(req.UserId)
+	if err != nil {
+		return nil, err
+	}
+
+	reqEntity := entities.Project{
+		UserId:      userId,
+		Name:        req.Name,
+		Description: req.Description,
+		Link:        req.Link,
+	}
+	if err := user.adapters.AddProject(reqEntity); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+func (user *UserService) DeleteProject(ctx context.Context, req *pb.DeleteProjectRequest) (*emptypb.Empty, error) {
+	if err := user.adapters.DeleteProject(req.ProjectId); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+func (user *UserService) EditProject(ctx context.Context, req *pb.UpdateProjectRequest) (*emptypb.Empty, error) {
+	projectId, err := uuid.Parse(req.ProjectId)
+	if err != nil {
+		return nil, err
+	}
+
+	reqEntity := entities.Project{
+		Id:          projectId,
+		Name:        req.Name,
+		Description: req.Description,
+		Link:        req.Link,
+	}
+	if err := user.adapters.EditProject(reqEntity); err != nil {
+		return nil, err
+	}
+	return nil, nil
+
+}
+func (user *UserService) GetAllProjects(req *pb.GetUserById, srv pb.UserService_GetAllProjectsServer) error {
+	projects, err := user.adapters.GetAllProjects(req.Id)
+	if err != nil {
+		return err
+	}
+	for _, project := range projects {
+		res := &pb.ProjectResponse{
+			Id:          project.Id.String(),
+			Name:        project.Name,
+			Description: project.Description,
+			Link:        project.Link,
+			Image:       project.Image,
+		}
+		if err := srv.Send(res); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (user *UserService) AddProjectImage(ctx context.Context, req *pb.AddProjectImageRequest) (*emptypb.Empty, error) {
+	imageUrl, err := helper.MinioUpload("project/"+req.ProjectId, req.ImageData)
+	if err != nil {
+		return nil, err
+	}
+	if err := user.adapters.UpdateProjectImage(imageUrl, req.ProjectId); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}

@@ -463,3 +463,40 @@ func (user *UserAdapter) UpdateSubscription(userId string, subscribed bool) erro
 	}
 	return nil
 }
+func (user *UserAdapter) AddProject(req entities.Project) error {
+	id := uuid.New()
+	addProjectQuery := `INSERT INTO projects (id,name,description,user_id,link,image) VALUES ($1,$2,$3,$4,$5,$6)`
+	if err := user.DB.Exec(addProjectQuery, id, req.Name, req.Description, req.UserId, req.Link, req.Image).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) DeleteProject(projectId string) error {
+	deleteQuery := `DELETE FROM projects WHERE id=?`
+	if err := user.DB.Exec(deleteQuery, projectId).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) EditProject(req entities.Project) error {
+	updateQuery := `UPDATE projects SET name=$1,description=$2,link=$3 WHERE id=$4`
+	if err := user.DB.Exec(updateQuery, req.Name, req.Description, req.Link, req.Id).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (user *UserAdapter) GetAllProjects(userId string) ([]entities.Project, error) {
+	selectQuery := `SELECT * FROM projects WHERE user_id=?`
+	var res []entities.Project
+	if err := user.DB.Raw(selectQuery, userId).Scan(&res).Error; err != nil {
+		return []entities.Project{}, err
+	}
+	return res, nil
+}
+func (user *UserAdapter) UpdateProjectImage(image string, projectId string) error {
+	updateQuery := `UPDATE projects SET image=$1 WHERE id=$2`
+	if err := user.DB.Exec(updateQuery, image, projectId).Error; err != nil {
+		return err
+	}
+	return nil
+}

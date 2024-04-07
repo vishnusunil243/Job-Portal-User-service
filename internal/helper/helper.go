@@ -1,11 +1,18 @@
 package helper
 
 import (
+	"bytes"
+	"context"
 	"fmt"
+	"log"
+	"os"
 	"time"
 	"unicode"
 
 	"github.com/google/uuid"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -54,4 +61,28 @@ func ConvertStringToTimeStamp(str string) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("please provide a valid start date")
 	}
 	return date, nil
+}
+func MinioUpload(name string, imageData []byte) (string, error) {
+	minioClient, err := minio.New(os.Getenv("MINIO_ENDPOINT"), &minio.Options{
+		Creds:  credentials.NewStaticV4(os.Getenv("MINIO_ACCESSKEY"), os.Getenv("MINIO_SECRETKEY"), ""),
+		Secure: false,
+	})
+	if err != nil {
+		log.Print("error while initialising minio", err)
+		return "", err
+	}
+	objectName := "images/" + name
+	contentType := `image/jpeg`
+	n, err := minioClient.PutObject(context.Background(), os.Getenv("BUCKET_NAME"), objectName, bytes.NewReader(imageData), int64(len(imageData)), minio.PutObjectOptions{ContentType: contentType})
+	if err != nil {
+		log.Println("error while uploading to minio", err)
+		return "", err
+	}
+	log.Printf("Successfully uploaded %s of size %v\n", objectName, n)
+	presignedURL, err := minioClient.PresignedGetObject(context.Background(), os.Getenv("BUCKET_NAME"), objectName, time.Second*24*60*60, nil)
+	if err != nil {
+		log.Println("error while generating presigned URL", err)
+		return "", err
+	}
+	return presignedURL.String(), nil
 }

@@ -63,4 +63,9 @@ type AdapterInterface interface {
 	ReportUser(userId string) error
 	GetInterview(userId, jobId string) (entities.Shortlist, error)
 	UpdateSubscription(userId string, subscribed bool) error
+	AddProject(req entities.Project) error
+	DeleteProject(projectId string) error
+	EditProject(req entities.Project) error
+	GetAllProjects(userId string) ([]entities.Project, error)
+	UpdateProjectImage(image string, projectId string) error
 }
