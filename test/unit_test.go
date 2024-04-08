@@ -157,3 +157,125 @@ func TestAddSkillAdmin(t *testing.T) {
 		})
 	}
 }
+func TestUserSignup(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	adapter := mock_adapters.NewMockAdapterInterface(ctrl)
+	usecase := mock_usecases.NewMockUsecases(ctrl)
+	userService := service.NewUserService(adapter, usecase)
+	tests := []struct {
+		name               string
+		request            *pb.UserSignupRequest
+		mockGetUserByEmail func(string) (entities.User, error)
+		mockGetUserByPhone func(string) (entities.User, error)
+		mockUserSignup     func(entities.User) (entities.User, error)
+		wantError          bool
+		expectedResult     *pb.UserSignupResponse
+	}{
+		{
+			name: "Success",
+			request: &pb.UserSignupRequest{
+				Email:    "valid@gmail.com",
+				Name:     "valid",
+				Password: "valid",
+				Phone:    "8888888888",
+			},
+			mockGetUserByEmail: func(s string) (entities.User, error) {
+				return entities.User{}, nil
+			},
+			mockGetUserByPhone: func(s string) (entities.User, error) {
+				return entities.User{}, nil
+			},
+			mockUserSignup: func(u entities.User) (entities.User, error) {
+				return entities.User{
+					Name:  "valid",
+					Email: "valid@gmail.com",
+					Phone: "8888888888",
+				}, nil
+			},
+			wantError: false,
+			expectedResult: &pb.UserSignupResponse{
+				Name:  "valid",
+				Email: "valid@gmail.com",
+				Phone: "8888888888",
+			},
+		},
+		{
+			name: "EmailNotUnique",
+			request: &pb.UserSignupRequest{
+				Email:    "valid@gmail.com",
+				Name:     "valid",
+				Password: "1234",
+				Phone:    "8888888888",
+			},
+			mockGetUserByEmail: func(s string) (entities.User, error) {
+				return entities.User{
+					Name:  "valid",
+					Email: "valid@gmail.com",
+					Phone: "8888888888",
+				}, nil
+			},
+			mockGetUserByPhone: func(s string) (entities.User, error) {
+				return entities.User{}, nil
+			},
+			mockUserSignup: func(u entities.User) (entities.User, error) {
+				return entities.User{}, nil
+			},
+			wantError: true,
+			expectedResult: &pb.UserSignupResponse{
+				Email: "valid@gmail.com",
+				Name:  "valid",
+				Phone: "8888888888",
+			},
+		},
+		{
+			name: "PhoneNotUnique",
+			request: &pb.UserSignupRequest{
+				Email:    "valid@gmail.com",
+				Name:     "valid",
+				Password: "valid",
+				Phone:    "8888888888",
+			},
+			mockGetUserByEmail: func(s string) (entities.User, error) {
+				return entities.User{}, nil
+			},
+			mockGetUserByPhone: func(s string) (entities.User, error) {
+				return entities.User{
+					Name:  "valid",
+					Email: "valid@gmail.com",
+					Phone: "88888888888",
+				}, nil
+			},
+			mockUserSignup: func(u entities.User) (entities.User, error) {
+				return entities.User{}, nil
+			},
+			wantError: true,
+			expectedResult: &pb.UserSignupResponse{
+				Name:                     "valid",
+				Email:                    "valid@gmail.com",
+				Phone:                    "8888888888",
+				ExperienceInCurrentField: "",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			adapter.EXPECT().GetUserByEmail(gomock.Any()).DoAndReturn(test.mockGetUserByEmail).Times(1)
+			if test.name != "EmailNotUnique" {
+				adapter.EXPECT().GetUserByPhone(gomock.Any()).DoAndReturn(test.mockGetUserByPhone).AnyTimes().Times(1)
+			}
+			if !test.wantError {
+				adapter.EXPECT().UserSignup(gomock.Any()).DoAndReturn(test.mockUserSignup).AnyTimes().Times(1)
+			}
+			res, err := userService.UserSignup(context.Background(), test.request)
+			if test.wantError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				res.Id = ""
+				assert.NotNil(t, res)
+				assert.Equal(t, test.expectedResult, res)
+			}
+		})
+	}
+}
