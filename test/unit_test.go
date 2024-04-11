@@ -20,7 +20,7 @@ func TestUserLogin(t *testing.T) {
 	defer ctrl.Finish()
 	adapter := mock_adapters.NewMockAdapterInterface(ctrl)
 	usecase := mock_usecases.NewMockUsecases(ctrl)
-	userService := service.NewUserService(adapter, usecase)
+	userService := service.NewUserService(adapter, usecase, "", "")
 	hashedPass, _ := helper.HashPassword("valid")
 	testUUID := uuid.New()
 	tests := []struct {
@@ -109,7 +109,7 @@ func TestAddSkillAdmin(t *testing.T) {
 	defer ctrl.Finish()
 	adapter := mock_adapters.NewMockAdapterInterface(ctrl)
 	usecase := mock_usecases.NewMockUsecases(ctrl)
-	userService := service.NewUserService(adapter, usecase)
+	userService := service.NewUserService(adapter, usecase, "", "")
 	tests := []struct {
 		name               string
 		request            *pb.AddSkillRequest
@@ -162,7 +162,7 @@ func TestUserSignup(t *testing.T) {
 	defer ctrl.Finish()
 	adapter := mock_adapters.NewMockAdapterInterface(ctrl)
 	usecase := mock_usecases.NewMockUsecases(ctrl)
-	userService := service.NewUserService(adapter, usecase)
+	userService := service.NewUserService(adapter, usecase, "", "")
 	tests := []struct {
 		name               string
 		request            *pb.UserSignupRequest

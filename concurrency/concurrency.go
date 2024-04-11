@@ -19,12 +19,14 @@ type Concurrency struct {
 	DB       *gorm.DB
 	adapters adapters.AdapterInterface
 	mu       sync.Mutex
+	service  *service.UserService
 }
 
-func NewConcurrency(DB *gorm.DB, adapters adapters.AdapterInterface) *Concurrency {
+func NewConcurrency(DB *gorm.DB, adapters adapters.AdapterInterface, service *service.UserService) *Concurrency {
 	return &Concurrency{
 		DB:       DB,
 		adapters: adapters,
+		service:  service,
 	}
 }
 func (c *Concurrency) Concurrency() {
@@ -77,13 +79,13 @@ func (c *Concurrency) sendWarningNotifications() error {
 
 	for _, shortlist := range shortlists {
 
-		jobData, err := service.CompanyClient.GetJob(context.Background(), &pb.GetJobById{
+		jobData, err := c.service.CompanyClient.GetJob(context.Background(), &pb.GetJobById{
 			Id: shortlist.JobId.String(),
 		})
 		if err != nil {
 			return err
 		}
-		if _, err := service.NotificationClient.AddNotification(context.Background(), &pb.AddNotificationRequest{
+		if _, err := c.service.NotificationClient.AddNotification(context.Background(), &pb.AddNotificationRequest{
 			UserId:  shortlist.UserId.String(),
 			Message: fmt.Sprintf(`{"message":"Please be aware of your interview scheduled at %v by the company %s for the position %s with roomId %s"}`, shortlist.InterviewDate.String(), jobData.Company, jobData.Designation, shortlist.RoomId),
 		}); err != nil {
@@ -93,13 +95,13 @@ func (c *Concurrency) sendWarningNotifications() error {
 		if err != nil {
 			log.Print("error retrieving user info ", err)
 		}
-		cmpny, err := service.CompanyClient.GetCompanyIdFromJobId(context.Background(), &pb.GetJobById{
+		cmpny, err := c.service.CompanyClient.GetCompanyIdFromJobId(context.Background(), &pb.GetJobById{
 			Id: shortlist.JobId.String(),
 		})
 		if err != nil {
 			log.Println("error retrieving company id", err)
 		}
-		companyData, err := service.CompanyClient.GetCompanyById(context.Background(), &pb.GetJobByCompanyId{
+		companyData, err := c.service.CompanyClient.GetCompanyById(context.Background(), &pb.GetJobByCompanyId{
 			Id: cmpny.Id,
 		})
 		if err != nil {

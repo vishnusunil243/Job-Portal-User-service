@@ -36,7 +36,7 @@ func ProduceShortlistUserMessage(email, company, designation, jobId string) erro
 	defer producer.Close()
 
 	topic := "ShortlistUser"
-	msg := fmt.Sprintf(`{"Email": "%s", "Designation": "%s", "JobID": "%s", "Company": "%s"`, email, designation, jobId, company)
+	msg := fmt.Sprintf(`{"Email": "%s", "Designation": "%s", "JobID": "%s", "Company": "%s"}`, email, designation, jobId, company)
 	message := []byte(msg)
 	p, o, err := producer.SendMessage(&sarama.ProducerMessage{
 		Topic:     topic,

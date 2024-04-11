@@ -17,21 +17,22 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-var (
+type UserService struct {
 	CompanyClient      pb.CompanyServiceClient
 	NotificationClient pb.EmailServiceClient
-)
-
-type UserService struct {
-	adapters adapters.AdapterInterface
-	usecases usecases.Usecases
+	adapters           adapters.AdapterInterface
+	usecases           usecases.Usecases
 	pb.UnimplementedUserServiceServer
 }
 
-func NewUserService(adapters adapters.AdapterInterface, usecases usecases.Usecases) *UserService {
+func NewUserService(adapters adapters.AdapterInterface, usecases usecases.Usecases, notificationaddr, companyaddr string) *UserService {
+	companyConn, _ := helper.DialGrpc(companyaddr)
+	notificationConn, _ := helper.DialGrpc(notificationaddr)
 	return &UserService{
-		adapters: adapters,
-		usecases: usecases,
+		adapters:           adapters,
+		usecases:           usecases,
+		CompanyClient:      pb.NewCompanyServiceClient(companyConn),
+		NotificationClient: pb.NewEmailServiceClient(notificationConn),
 	}
 }
 func (user *UserService) UserSignup(ctx context.Context, req *pb.UserSignupRequest) (*pb.UserSignupResponse, error) {
@@ -429,7 +430,7 @@ func (user *UserService) JobApply(ctx context.Context, req *pb.JobApplyRequest) 
 	if jobs.JobStatusId != 0 {
 		return nil, fmt.Errorf("you have already applied for this job")
 	}
-	jobskills, err := CompanyClient.GetAllJobSkill(context.Background(), &pb.GetJobById{
+	jobskills, err := user.CompanyClient.GetAllJobSkill(context.Background(), &pb.GetJobById{
 		Id: req.JobId,
 	})
 	if err != nil {
@@ -446,7 +447,7 @@ func (user *UserService) JobApply(ctx context.Context, req *pb.JobApplyRequest) 
 		}
 		jobSkillData = append(jobSkillData, jobSkill)
 	}
-	jobData, err := CompanyClient.GetJob(context.Background(), &pb.GetJobById{
+	jobData, err := user.CompanyClient.GetJob(context.Background(), &pb.GetJobById{
 		Id: req.JobId,
 	})
 	if err != nil {
@@ -605,7 +606,7 @@ func (user *UserService) UserAppliedJobs(req *pb.GetUserById, srv pb.UserService
 		return err
 	}
 	for _, job := range jobs {
-		jobData, err := CompanyClient.GetJob(context.Background(), &pb.GetJobById{
+		jobData, err := user.CompanyClient.GetJob(context.Background(), &pb.GetJobById{
 			Id: job.JobId.String(),
 		})
 		if err != nil {
@@ -682,7 +683,7 @@ func (user *UserService) AddToShortlist(ctx context.Context, req *pb.AddToShortL
 	if err := user.adapters.UpdateAppliedJobStatus(2, req.JobId, req.UserId, time.Time{}); err != nil {
 		return nil, err
 	}
-	jobData, err := CompanyClient.GetJob(context.Background(), &pb.GetJobById{
+	jobData, err := user.CompanyClient.GetJob(context.Background(), &pb.GetJobById{
 		Id: req.JobId,
 	})
 	if err != nil {
@@ -693,7 +694,7 @@ func (user *UserService) AddToShortlist(ctx context.Context, req *pb.AddToShortL
 		fmt.Println(err)
 	}
 	go func() {
-		_, err = NotificationClient.AddNotification(context.Background(), &pb.AddNotificationRequest{
+		_, err = user.NotificationClient.AddNotification(context.Background(), &pb.AddNotificationRequest{
 			UserId:  req.UserId,
 			Message: fmt.Sprintf(`{"message": "congrats you have been shortlisted for the position %s at company %s"}`, jobData.Designation, jobData.Company),
 		})
@@ -837,7 +838,7 @@ func (user *UserService) InterviewScheduleForUser(ctx context.Context, req *pb.I
 	if err := user.adapters.UpdateAppliedJobStatus(3, req.JobId, req.UserId, date); err != nil {
 		return nil, err
 	}
-	jobData, err := CompanyClient.GetJob(context.Background(), &pb.GetJobById{
+	jobData, err := user.CompanyClient.GetJob(context.Background(), &pb.GetJobById{
 		Id: req.JobId,
 	})
 	if err != nil {
@@ -849,7 +850,7 @@ func (user *UserService) InterviewScheduleForUser(ctx context.Context, req *pb.I
 	}
 	roomId := helper.GenerateRoomId()
 	go func() {
-		NotificationClient.AddNotification(context.Background(), &pb.AddNotificationRequest{
+		user.NotificationClient.AddNotification(context.Background(), &pb.AddNotificationRequest{
 			UserId:  req.UserId,
 			Message: fmt.Sprintf(`{"message": "interview has been scheduled for %s by %s for the position of %s AND your roomId for the interview is %s"}`, req.Date, jobData.Company, jobData.Designation, roomId),
 		})
@@ -863,13 +864,13 @@ func (user *UserService) InterviewScheduleForUser(ctx context.Context, req *pb.I
 	}
 	return nil, nil
 }
-func (user *UserService) GetInterviewsForUser(req *pb.GetUserById, srv pb.UserService_GetInterviewsForUserServer) error {
-	users, err := user.adapters.GetInterviewsForUser(req.Id)
+func (u *UserService) GetInterviewsForUser(req *pb.GetUserById, srv pb.UserService_GetInterviewsForUserServer) error {
+	users, err := u.adapters.GetInterviewsForUser(req.Id)
 	if err != nil {
 		return err
 	}
 	for _, user := range users {
-		jobData, err := CompanyClient.GetJob(context.Background(), &pb.GetJobById{
+		jobData, err := u.CompanyClient.GetJob(context.Background(), &pb.GetJobById{
 			Id: user.JobId.String(),
 		})
 		if err != nil {
@@ -911,7 +912,7 @@ func (user *UserService) HireUser(ctx context.Context, req *pb.AddToShortListReq
 	if err := user.adapters.HireUser(req.UserId, req.JobId); err != nil {
 		return nil, err
 	}
-	if _, err := CompanyClient.UpdateHired(context.Background(), &pb.GetJobById{
+	if _, err := user.CompanyClient.UpdateHired(context.Background(), &pb.GetJobById{
 		Id: req.JobId,
 	}); err != nil {
 		return nil, err
@@ -921,7 +922,7 @@ func (user *UserService) HireUser(ctx context.Context, req *pb.AddToShortListReq
 		if err != nil {
 			log.Println("error retrieving userData")
 		}
-		jobData, err := CompanyClient.GetJob(context.Background(), &pb.GetJobById{
+		jobData, err := user.CompanyClient.GetJob(context.Background(), &pb.GetJobById{
 			Id: req.JobId,
 		})
 		if err != nil {
@@ -935,7 +936,7 @@ func (user *UserService) HireUser(ctx context.Context, req *pb.AddToShortListReq
 		if err := kafka.HiredMessage(userData.Email, jobData.Company, jobData.Designation, interview.InterviewDate.String()); err != nil {
 			log.Println("error while sending hiring message ", err)
 		}
-		if _, err := NotificationClient.AddNotification(context.Background(), &pb.AddNotificationRequest{
+		if _, err := user.NotificationClient.AddNotification(context.Background(), &pb.AddNotificationRequest{
 			UserId:  req.UserId,
 			Message: fmt.Sprintf(`{"message": "Congrats you have been hired for the position %s at %s"}`, jobData.Designation, jobData.Company),
 		}); err != nil {

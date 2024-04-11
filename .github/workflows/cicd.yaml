@@ -10,13 +10,49 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Set Up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.21'
+      - name: Set Up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
     
-    - name: test
-      run: |
-        go test ./test -cover
+      - name: test
+        run: |
+          go test ./test -cover
+       
+  push_to_registry:
+    name: Push Docker Image To Docker Hub
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
+        with:
+          username: ${{secrets.DOCKER_USERNAME}}
+          password: ${{secrets.DOCKER_PASSWORD}}
+
+      - name: copy variables to container
+        run: |
+          echo 'DB_KEY="${DB_KEY}"' > /.env
+          echo 'MINIO_ENDPOINT="${MINIO_ENDPOINT}"' >> /.env
+          echo 'MINIO_ACCESSKEY="${MINIO_ACCESSKEY}"' >> /.env
+          echo 'MINIO_SECRETKEY="${MINIO_SECRETKEY}"' >> /.env
+          echo 'BUCKET_NAME="${BUCKET_NAME}"' >> /.env
+
+      - name: Extract metadata(tags,labels) for Docker
+        id: meta
+        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        with:
+          images: ${{secrets.DOCKER_USERNAME}}/job-portal-user-service
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
+        with:
+          context: .
+          file: ./dockerfile
+          push: true
+          tags: ${{github.ref}}
+          labels: ${{steps.meta.outputs.labels}}

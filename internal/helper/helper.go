@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"google.golang.org/grpc"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -85,4 +86,7 @@ func MinioUpload(name string, imageData []byte) (string, error) {
 		return "", err
 	}
 	return presignedURL.String(), nil
+}
+func DialGrpc(addr string) (*grpc.ClientConn, error) {
+	return grpc.Dial(addr, grpc.WithInsecure())
 }
