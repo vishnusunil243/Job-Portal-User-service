@@ -36,11 +36,11 @@ jobs:
 
       - name: copy variables to container
         run: |
-          echo 'DB_KEY="${DB_KEY}"' > /.env
-          echo 'MINIO_ENDPOINT="${MINIO_ENDPOINT}"' >> /.env
-          echo 'MINIO_ACCESSKEY="${MINIO_ACCESSKEY}"' >> /.env
-          echo 'MINIO_SECRETKEY="${MINIO_SECRETKEY}"' >> /.env
-          echo 'BUCKET_NAME="${BUCKET_NAME}"' >> /.env
+          echo 'DB_KEY="${DB_KEY}"' > .env
+          echo 'MINIO_ENDPOINT="${MINIO_ENDPOINT}"' >> .env
+          echo 'MINIO_ACCESSKEY="${MINIO_ACCESSKEY}"' >> .env
+          echo 'MINIO_SECRETKEY="${MINIO_SECRETKEY}"' >> .env
+          echo 'BUCKET_NAME="${BUCKET_NAME}"' >> .env
 
       - name: Extract metadata(tags,labels) for Docker
         id: meta
