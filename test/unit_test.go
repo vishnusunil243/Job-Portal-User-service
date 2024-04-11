@@ -279,3 +279,5 @@ func TestUserSignup(t *testing.T) {
 		})
 	}
 }
+
+//added tests
