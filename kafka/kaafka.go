@@ -28,7 +28,7 @@ func ProduceShortlistUserMessage(email, company, designation, jobId string) erro
 	config.Producer.Return.Successes = true
 	config.Producer.Partitioner = NewFixedPartitioner()
 
-	producer, err := sarama.NewSyncProducer([]string{"localhost:9092"}, config)
+	producer, err := sarama.NewSyncProducer([]string{"kafka:9092"}, config)
 	if err != nil {
 		log.Printf("Failed to create producer: %s\n", err)
 		return err
