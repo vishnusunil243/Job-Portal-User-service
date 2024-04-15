@@ -28,7 +28,7 @@ func ProduceShortlistUserMessage(email, company, designation, jobId string) erro
 	config.Producer.Return.Successes = true
 	config.Producer.Partitioner = NewFixedPartitioner()
 
-	producer, err := sarama.NewSyncProducer([]string{"kafka:9092"}, config)
+	producer, err := sarama.NewSyncProducer([]string{"apache-kafka-service:9092"}, config)
 	if err != nil {
 		log.Printf("Failed to create producer: %s\n", err)
 		return err
@@ -58,7 +58,7 @@ func InterviewScheduledMessage(email, company, date, designation, roomId string)
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Return.Successes = true
 	config.Producer.Partitioner = NewFixedPartitioner()
-	producer, err := sarama.NewSyncProducer([]string{"localhost:9092"}, config)
+	producer, err := sarama.NewSyncProducer([]string{"apache-kafka-service:9092"}, config)
 	if err != nil {
 		log.Printf("Failed to create producer: %s\n", err)
 		return err
@@ -88,7 +88,7 @@ func HiredMessage(email, company, designation, interviewDate string) error {
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Return.Successes = true
 	config.Producer.Partitioner = NewFixedPartitioner()
-	producer, err := sarama.NewSyncProducer([]string{"localhost:9092"}, config)
+	producer, err := sarama.NewSyncProducer([]string{"apache-kafka-service:9092"}, config)
 	if err != nil {
 		log.Printf("Failed to create producer: %s\n", err)
 		return err
@@ -117,7 +117,7 @@ func WarningEmail(userName, company, designation, interviewDate, companyEmail, u
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Return.Successes = true
 	config.Producer.Partitioner = NewFixedPartitioner()
-	producer, err := sarama.NewSyncProducer([]string{"localhost:9092"}, config)
+	producer, err := sarama.NewSyncProducer([]string{"apache-kafka-service:9092"}, config)
 	if err != nil {
 		log.Printf("Failed to create producer: %s\n", err)
 		return err
