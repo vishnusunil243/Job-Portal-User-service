@@ -11,7 +11,7 @@ import (
 func Initializer(db *gorm.DB) *service.UserService {
 	repo := adapters.NewUserAdapter(db)
 	usecase := usecases.NewUserUseCase(repo)
-	service := service.NewUserService(repo, usecase, ":8087", ":8082")
+	service := service.NewUserService(repo, usecase, "notification-service:8087", "company-service:8082")
 	c := concurrency.NewConcurrency(db, repo, service)
 	c.Concurrency()
 	return service
