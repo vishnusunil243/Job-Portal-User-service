@@ -340,7 +340,7 @@ func (user *UserAdapter) GetWeightage(userId, jobId string) (float64, error) {
 }
 func (user *UserAdapter) GetShortlist(jobId string) ([]entities.Shortlist, error) {
 	var res []entities.Shortlist
-	selectQuery := `SELECT * FROM shortlists WHERE job_id=?`
+	selectQuery := `SELECT * FROM shortlists WHERE job_id=? ORDER BY weightage DESC`
 	if err := user.DB.Raw(selectQuery, jobId).Scan(&res).Error; err != nil {
 		return []entities.Shortlist{}, err
 	}
